@@ -6,4 +6,10 @@
     </style>
 
     <style name="Theme.DyipQrXml" parent="Base.Theme.DyipQrXml" />
+    
+    <!-- Styles for Toolbar/AppBar -->
+    <style name="Theme.DyipQrXml.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    
+    <!-- Styles for Popup Menu -->
+    <style name="Theme.DyipQrXml.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 </resources>

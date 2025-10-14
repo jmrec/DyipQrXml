@@ -1,3 +1,30 @@
 <resources>
-    <string name="app_name">DyipQrXml</string>
+    <string name="app_name">DyipQR</string>
+    <string name="app_description">DyipQR is an application that helps commuters to find jeepney routes and stops in Baguio City.</string>
+    <string name="quick_scan">Quick Scan</string>
+    <string name="account">Account</string>
+    <string name="detect_nearby_terminals">Detect Nearby Terminals</string>
+    <string name="saved">Saved</string>
+    <string name="scan_qr">Scan QR</string>
+    <string name="enter_four_digit_code">Enter Four Digit Code</string>
+    <string name="hey_there">Hey, there</string>
+    <string name="welcome_back">Welcome Back</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="login">Login</string>
+    <string name="dont_have_account">Don\'t have an account? Register</string>
+    <string name="hello_there">Hello there,</string>
+    <string name="create_account">Create an Account</string>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="register">Register</string>
+    <string name="already_have_account">Already have an account? Login</string>
+    <string name="accept_terms">I accept the terms and conditions.</string>
+    <string name="profile">Profile</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="logout">Logout</string>
+    <string name="terminals">Terminals</string>
+    <string name="made_with_love">Made with ♡ by Fusion5</string>
+    <string name="camera_permission_required">Camera permission is required to scan QR codes.</string>
+    <string name="grant_permission">Grant Permission</string>
 </resources>
