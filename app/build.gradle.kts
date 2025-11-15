@@ -1,6 +1,7 @@
 plugins {
 	alias(libs.plugins.android.application)
 	alias(libs.plugins.kotlin.android)
+	kotlin("kapt")
 }
 
 android {
@@ -48,12 +49,22 @@ dependencies {
 	implementation(libs.androidx.lifecycle.runtime.ktx)
 	implementation(libs.androidx.navigation.fragment.ktx)
 	implementation(libs.androidx.navigation.ui.ktx)
+	implementation(libs.androidx.navigation.runtime.ktx)
 	implementation(libs.androidx.camera.core)
 	implementation(libs.androidx.camera.camera2)
 	implementation(libs.androidx.camera.lifecycle)
 	implementation(libs.androidx.camera.view)
 	implementation(libs.androidx.lifecycle.viewmodel.ktx)
-	implementation(libs.androidx.navigation.runtime.ktx)
+
+	implementation(libs.kotlinx.coroutines.core)
+	implementation(libs.kotlinx.coroutines.android)
+
+	implementation(libs.androidx.room.runtime)
+	implementation(libs.androidx.room.ktx)
+	kapt(libs.androidx.room.compiler)
+
+	implementation(libs.androidx.datastore.preferences)
+
 	testImplementation(libs.junit)
 	androidTestImplementation(libs.androidx.junit)
 	androidTestImplementation(libs.androidx.espresso.core)
