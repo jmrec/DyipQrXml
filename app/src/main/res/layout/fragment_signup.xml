@@ -20,6 +20,7 @@
             android:layout_marginBottom="48dp">
 
             <TextView
+                android:id="@+id/textHeaderTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Create Account"
@@ -29,6 +30,7 @@
                 android:layout_marginBottom="8dp" />
 
             <TextView
+                android:id="@+id/textHeaderSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Join us today"
@@ -46,6 +48,7 @@
 
             <!-- Full Name Field -->
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputFullName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -71,6 +74,7 @@
 
             <!-- Email Field -->
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -96,7 +100,7 @@
 
             <!-- Password Field -->
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/textInputLayoutPassword"
+                android:id="@+id/textInputPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -124,7 +128,7 @@
 
             <!-- Confirm Password Field -->
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/textInputLayoutConfirmPassword"
+                android:id="@+id/textInputConfirmPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:boxCornerRadiusTopStart="12dp"
@@ -157,6 +161,13 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center_horizontal">
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp" />
 
             <!-- Sign Up Button -->
             <com.google.android.material.button.MaterialButton

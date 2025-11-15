@@ -45,6 +45,7 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/textName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="User Profile"
@@ -54,6 +55,7 @@
                 android:layout_marginBottom="8dp" />
 
             <TextView
+                android:id="@+id/textEmail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Manage your account settings"
@@ -98,8 +100,8 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_person"
-                            android:tint="?attr/colorPrimary"
-                            android:layout_marginEnd="16dp" />
+                            android:layout_marginEnd="16dp"
+                            app:tint="?attr/colorPrimary" />
 
                         <TextView
                             android:layout_width="0dp"
@@ -143,8 +145,8 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_search"
-                            android:tint="?attr/colorPrimary"
-                            android:layout_marginEnd="16dp" />
+                            android:layout_marginEnd="16dp"
+                            app:tint="?attr/colorPrimary" />
 
                         <TextView
                             android:layout_width="0dp"
@@ -188,8 +190,8 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_lock"
-                            android:tint="?attr/colorPrimary"
-                            android:layout_marginEnd="16dp" />
+                            android:layout_marginEnd="16dp"
+                            app:tint="?attr/colorPrimary" />
 
                         <TextView
                             android:layout_width="0dp"

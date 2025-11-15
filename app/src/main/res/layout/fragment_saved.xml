@@ -4,26 +4,124 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:padding="32dp">
+    android:padding="16dp">
 
     <!-- Header -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Saved"
+        android:text="Saved Terminals"
         android:textColor="?attr/colorOnSurface"
         android:textSize="28sp"
         android:textStyle="bold"
         android:layout_marginBottom="24dp" />
 
-    <!-- Placeholder Content -->
-    <TextView
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Your saved items will appear here"
-        android:textColor="?attr/colorOnSurfaceVariant"
-        android:textSize="16sp"
-        android:textAlignment="center" />
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <!-- Error Message -->
+    <TextView
+        android:id="@+id/textError"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="?attr/colorError"
+        android:textSize="14sp"
+        android:textAlignment="center"
+        android:padding="16dp"
+        android:visibility="gone" />
+
+    <!-- Login Prompt -->
+    <LinearLayout
+        android:id="@+id/layoutLoginPrompt"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        android:padding="32dp">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_person"
+            android:tint="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Login Required"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Please log in to save and view your favorite terminals"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="14sp"
+            android:textAlignment="center"
+            android:layout_marginBottom="24dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Go to Login"
+            app:backgroundTint="?attr/colorPrimary"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
+
+    <!-- Empty State -->
+    <LinearLayout
+        android:id="@+id/layoutEmptyState"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        android:padding="32dp">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_star"
+            android:tint="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No Saved Terminals"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Your favorite terminals will appear here"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="14sp"
+            android:textAlignment="center" />
+
+    </LinearLayout>
+
+    <!-- Saved Terminals List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerSaved"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
 
 </LinearLayout>
