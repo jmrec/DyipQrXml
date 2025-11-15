@@ -1,0 +1,21 @@
+[
+  {
+    "name": "Mines View Park",
+    "description": "Scenic overlook terminal serving northern routes.",
+    "latitude": 16.4218,
+    "longitude": 120.638
+  },
+  {
+    "name": "Burnham Park",
+    "description": "Central terminal beside the park for downtown routes.",
+    "latitude": 16.4115,
+    "longitude": 120.5954
+  },
+  {
+    "name": "Session Road",
+    "description": "Main commercial strip with multiple jeepney stops.",
+    "latitude": 16.4146,
+    "longitude": 120.596
+  }
+]
+

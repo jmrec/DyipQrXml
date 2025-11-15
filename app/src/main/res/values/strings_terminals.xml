@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="location_available">📍 Location available</string>
+    <string name="remove">Remove</string>
+    <string name="favorite_add_desc">Add to favorites</string>
+    <string name="favorite_remove_desc">Remove from favorites</string>
+</resources>
