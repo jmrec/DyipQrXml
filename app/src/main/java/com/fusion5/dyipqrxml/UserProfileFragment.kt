@@ -5,13 +5,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.fusion5.dyipqrxml.databinding.FragmentUserProfileBinding
+import com.fusion5.dyipqrxml.ui.profile.ProfileViewModel
+import com.fusion5.dyipqrxml.ui.profile.ProfileViewModelFactory
+import kotlinx.coroutines.launch
 
 class UserProfileFragment : Fragment() {
 
     private var _binding: FragmentUserProfileBinding? = null
     private val binding get() = _binding!!
+    private val viewModel: ProfileViewModel by viewModels { ProfileViewModelFactory(requireContext()) }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -25,12 +31,25 @@ class UserProfileFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupClickListeners()
+        observeViewModel()
     }
 
     private fun setupClickListeners() {
-        binding.cardLogout.setOnClickListener { // Corrected from buttonLogout to cardLogout
-            // TODO: Implement logout logic
-            findNavController().navigate(R.id.action_userProfile_to_login)
+        binding.cardLogout.setOnClickListener {
+            viewModel.logout()
+        }
+    }
+
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.state.collect { state ->
+                binding.textName.text = state.fullName
+                binding.textEmail.text = state.email
+                if (state.navigateToLogin) {
+                    findNavController().navigate(R.id.loginFragment)
+                    viewModel.onNavigated()
+                }
+            }
         }
     }
 
