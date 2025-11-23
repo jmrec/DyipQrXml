@@ -65,6 +65,13 @@ dependencies {
 
 	implementation(libs.androidx.datastore.preferences)
 
+	// ML Kit Barcode Scanning for QR codes
+	implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
+	// Google Maps and Location Services
+	implementation("com.google.android.gms:play-services-maps:18.2.0")
+	implementation("com.google.android.gms:play-services-location:21.0.1")
+
 	testImplementation(libs.junit)
 	androidTestImplementation(libs.androidx.junit)
 	androidTestImplementation(libs.androidx.espresso.core)

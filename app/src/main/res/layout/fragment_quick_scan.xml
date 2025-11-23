@@ -29,7 +29,7 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Camera Preview Placeholder -->
+            <!-- Camera Preview for QR Scanning -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="300dp"
                 android:layout_height="300dp"
@@ -37,25 +37,35 @@
                 app:cardElevation="8dp"
                 android:layout_marginBottom="16dp">
 
-                <LinearLayout
+                <!-- Camera Preview -->
+                <androidx.camera.view.PreviewView
+                    android:id="@+id/previewView"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:orientation="vertical"
-                    android:gravity="center">
+                    android:scaleType="centerCrop" />
 
-                    <TextView
-                        android:id="@+id/textCameraPlaceholder"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Camera Preview\n(Placeholder)"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="16sp"
-                        android:textAlignment="center"
-                        android:visibility="visible" />
-
-                </LinearLayout>
+                <!-- Scan result overlay -->
+                <TextView
+                    android:id="@+id/textScanResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="8dp"
+                    android:gravity="center"
+                    android:text="Scanning for QR Code..."
+                    android:background="#A0000000"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp"
+                    android:layout_gravity="bottom" />
 
             </com.google.android.material.card.MaterialCardView>
+
+            <Button
+                android:id="@+id/buttonRescan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Scan Again"
+                android:visibility="gone"
+                android:layout_marginTop="8dp"/>
 
         </LinearLayout>
 

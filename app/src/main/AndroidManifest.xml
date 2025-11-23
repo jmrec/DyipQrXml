@@ -4,6 +4,9 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="true" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -14,6 +17,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DyipQrXml">
+        
+        <!-- Google Maps API Key - Replace YOUR_GOOGLE_MAPS_API_KEY with your actual API key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyDrgk77kPV2GOD3LYAn87wr0E6ITE7qke4" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
