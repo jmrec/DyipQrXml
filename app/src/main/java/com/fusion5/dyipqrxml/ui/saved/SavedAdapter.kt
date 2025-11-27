@@ -6,13 +6,13 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.fusion5.dyipqrxml.data.model.Terminal
+import com.fusion5.dyipqrxml.data.model.Route
 import com.fusion5.dyipqrxml.databinding.ItemSavedTerminalBinding
 
 class SavedAdapter(
-    private val onTerminalClick: (Terminal) -> Unit,
-    private val onRemoveFavorite: (Terminal) -> Unit
-) : ListAdapter<Terminal, SavedAdapter.SavedTerminalViewHolder>(SavedTerminalDiffCallback) {
+    private val onRouteClick: (Route) -> Unit,
+    private val onRemoveFavorite: (Route) -> Unit
+) : ListAdapter<Route, SavedAdapter.SavedTerminalViewHolder>(SavedTerminalDiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SavedTerminalViewHolder {
         val binding = ItemSavedTerminalBinding.inflate(
@@ -24,42 +24,44 @@ class SavedAdapter(
     }
 
     override fun onBindViewHolder(holder: SavedTerminalViewHolder, position: Int) {
-        val terminal = getItem(position)
-        holder.bind(terminal)
+        val route = getItem(position)
+        holder.bind(route)
     }
 
     inner class SavedTerminalViewHolder(
         private val binding: ItemSavedTerminalBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(terminal: Terminal) {
-            binding.textTerminalName.text = terminal.name
-            binding.textTerminalDescription.text = terminal.description
+        fun bind(route: Route) {
+            binding.textTerminalName.text = route.routeCode
+            binding.textTerminalDescription.text = "${route.startTerminalName} → ${route.endTerminalName}"
             
-            // Show location info if available
-            if (terminal.latitude != null && terminal.longitude != null) {
-                binding.textLocationInfo.text = "Location available"
-                binding.textLocationInfo.visibility = View.VISIBLE
-            } else {
-                binding.textLocationInfo.visibility = View.GONE
-            }
+            // Show fare and travel time info
+            val fareInfo = "Fare: ₱${route.fare}"
+            val timeInfo = if (route.estimatedTravelTimeInSeconds != null) {
+                val minutes = route.estimatedTravelTimeInSeconds / 60
+                " • ${minutes} min"
+            } else ""
+            
+            binding.textLocationInfo.text = fareInfo + timeInfo
+            binding.textLocationInfo.visibility = View.VISIBLE
 
             binding.root.setOnClickListener {
-                onTerminalClick(terminal)
+                onRouteClick(route)
             }
 
             binding.buttonRemove.setOnClickListener {
-                onRemoveFavorite(terminal)
+                onRemoveFavorite(route)
             }
         }
     }
 
-    object SavedTerminalDiffCallback : DiffUtil.ItemCallback<Terminal>() {
-        override fun areItemsTheSame(oldItem: Terminal, newItem: Terminal): Boolean {
+    object SavedTerminalDiffCallback : DiffUtil.ItemCallback<Route>() {
+        override fun areItemsTheSame(oldItem: Route, newItem: Route): Boolean {
             return oldItem.id == newItem.id
         }
 
-        override fun areContentsTheSame(oldItem: Terminal, newItem: Terminal): Boolean {
+        override fun areContentsTheSame(oldItem: Route, newItem: Route): Boolean {
             return oldItem == newItem
         }
     }

@@ -5,8 +5,9 @@ import com.fusion5.dyipqrxml.data.model.User
 
 fun UserEntity.toDomain() = User(
     id = id,
-    fullName = fullName,
+    firstName = firstName,
+    lastName = lastName,
     email = email,
-    createdAt = createdAt
+    createdAt = createdAt,
+    updatedAt = updatedAt
 )
-

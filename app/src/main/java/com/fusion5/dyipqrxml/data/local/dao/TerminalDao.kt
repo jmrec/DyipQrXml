@@ -9,27 +9,27 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TerminalDao {
-    @Query("SELECT * FROM terminals ORDER BY name")
+    @Query("SELECT * FROM Terminals ORDER BY name")
     fun observeAll(): Flow<List<TerminalEntity>>
 
-    @Query("SELECT * FROM terminals")
+    @Query("SELECT * FROM Terminals")
     suspend fun getAllList(): List<TerminalEntity>
 
-    @Query("SELECT * FROM terminals WHERE name LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY name")
+    @Query("SELECT * FROM Terminals WHERE name LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY name")
     fun search(query: String): Flow<List<TerminalEntity>>
 
-    @Query("SELECT * FROM terminals WHERE id = :id LIMIT 1")
+    @Query("SELECT * FROM Terminals WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): TerminalEntity?
 
-    @Query("SELECT * FROM terminals WHERE id = :id")
+    @Query("SELECT * FROM Terminals WHERE id = :id")
     fun observeById(id: Long): Flow<TerminalEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(terminals: List<TerminalEntity>)
 
-    @Query("DELETE FROM terminals")
+    @Query("DELETE FROM Terminals")
     suspend fun clearAll()
 
-    @Query("SELECT COUNT(*) FROM terminals")
+    @Query("SELECT COUNT(*) FROM Terminals")
     suspend fun count(): Int
 }

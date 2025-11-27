@@ -23,7 +23,7 @@
     <string name="profile">Profile</string>
     <string name="edit_profile">Edit Profile</string>
     <string name="logout">Logout</string>
-    <string name="terminals">Terminals</string>
+    <string name="routes">Routes</string>
     <string name="made_with_love">Made with ♡ by Fusion5</string>
     <string name="camera_permission_required">Camera permission is required to scan QR codes.</string>
     <string name="grant_permission">Grant Permission</string>

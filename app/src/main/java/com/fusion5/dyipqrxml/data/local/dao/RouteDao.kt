@@ -6,42 +6,34 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.fusion5.dyipqrxml.data.local.entity.RouteEntity
-import com.fusion5.dyipqrxml.data.local.entity.RouteTerminalCrossRef
 import com.fusion5.dyipqrxml.data.local.entity.RouteWithTerminals
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RouteDao {
     @Transaction
-    @Query("SELECT * FROM routes")
+    @Query("SELECT * FROM Routes")
     fun observeAllRoutesWithTerminals(): Flow<List<RouteWithTerminals>>
     
     @Transaction
-    @Query("SELECT * FROM routes WHERE id = :id LIMIT 1")
+    @Query("SELECT * FROM Routes WHERE id = :id LIMIT 1")
     suspend fun getRouteWithTerminalsById(id: Long): RouteWithTerminals?
 
     @Transaction
-    @Query("SELECT * FROM routes WHERE name LIKE '%' || :query || '%' OR destination LIKE '%' || :query || '%' ORDER BY name")
+    @Query("SELECT * FROM Routes WHERE route_code LIKE '%' || :query || '%' ORDER BY route_code")
     fun searchRoutesWithTerminals(query: String): Flow<List<RouteWithTerminals>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRoute(route: RouteEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertRouteTerminalCrossRefs(refs: List<RouteTerminalCrossRef>)
-
-    @Query("DELETE FROM routes")
+    @Query("DELETE FROM Routes")
     suspend fun clearRoutes()
     
-    @Query("DELETE FROM route_terminal_cross_ref")
-    suspend fun clearCrossRefs()
-
     @Transaction
     suspend fun clearAll() {
-        clearCrossRefs()
         clearRoutes()
     }
 
-    @Query("SELECT COUNT(*) FROM routes")
+    @Query("SELECT COUNT(*) FROM Routes")
     suspend fun count(): Int
 }

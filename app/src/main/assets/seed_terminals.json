@@ -14,20 +14,6 @@
     ]
   },
   {
-    "name": "City Camp",
-    "description": "Terminal at City Camp.",
-    "terminals": [
-      {
-        "latitude": 16.41306279268963,
-        "longitude": 120.59404567682509
-      },
-      {
-        "latitude": 16.41095138206917,
-        "longitude": 120.58913435997101
-      }
-    ]
-  },
-  {
     "name": "Leonila Hill",
     "description": "Terminal at Leonila Hill.",
     "terminals": [
@@ -38,6 +24,20 @@
       {
         "latitude": 16.427834324627412,
         "longitude": 120.60155842441526
+      }
+    ]
+  },
+  {
+    "name": "City Camp",
+    "description": "Terminal at City Camp.",
+    "terminals": [
+      {
+        "latitude": 16.41306279268963,
+        "longitude": 120.59404567682509
+      },
+      {
+        "latitude": 16.41095138206917,
+        "longitude": 120.58913435997101
       }
     ]
   }

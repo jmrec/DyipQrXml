@@ -10,9 +10,9 @@ class SavedViewModelFactory(private val context: Context) : ViewModelProvider.Fa
         if (modelClass.isAssignableFrom(SavedViewModel::class.java)) {
             val authRepository = ServiceLocator.provideAuthRepository(context)
             val favoriteRepository = ServiceLocator.provideFavoriteRepository(context)
-            val terminalRepository = ServiceLocator.provideTerminalRepository(context)
+            val routeRepository = ServiceLocator.provideRouteRepository(context)
             @Suppress("UNCHECKED_CAST")
-            return SavedViewModel(authRepository, favoriteRepository, terminalRepository) as T
+            return SavedViewModel(authRepository, favoriteRepository, routeRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -19,7 +19,7 @@
             android:id="@+id/searchView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:queryHint="Search terminals..."
+            android:queryHint="Search routes..."
             android:background="?attr/colorSurface" />
 
     </com.google.android.material.card.MaterialCardView>
@@ -63,7 +63,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="No terminals found"
+            android:text="No routes found"
             android:textColor="?attr/colorOnSurface"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -72,7 +72,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Try adjusting your search or check back later"
+            android:text="Try adjusting your search or check back later for new routes"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="14sp"
             android:textAlignment="center" />

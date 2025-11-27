@@ -10,56 +10,70 @@ import com.fusion5.dyipqrxml.R
 import com.fusion5.dyipqrxml.databinding.ItemTerminalBinding
 
 class TerminalsAdapter(
-    private val onTerminalClick: (TerminalListItem) -> Unit,
-    private val onToggleFavorite: (TerminalListItem) -> Unit
-) : ListAdapter<TerminalListItem, TerminalsAdapter.TerminalViewHolder>(TerminalDiffCallback) {
+    private val onRouteClick: (com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite) -> Unit,
+    private val onFavoriteToggle: (com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite) -> Unit
+) : ListAdapter<com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite, TerminalsAdapter.RouteViewHolder>(RouteDiffCallback) {
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TerminalViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RouteViewHolder {
         val binding = ItemTerminalBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
             false
         )
-        return TerminalViewHolder(binding)
+        return RouteViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: TerminalViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: RouteViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
 
-    inner class TerminalViewHolder(
+    inner class RouteViewHolder(
         private val binding: ItemTerminalBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(item: TerminalListItem) {
-            val terminal = item.terminal
-            binding.textTerminalName.text = terminal.name
-            binding.textTerminalDescription.text = terminal.description
+        fun bind(routeWithFavorite: com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite) {
+            val route = routeWithFavorite.route
+            
+            // Set route information
+            binding.textTerminalName.text = route.routeCode
+            binding.textTerminalDescription.text = "${route.startTerminalName} → ${route.endTerminalName}"
+            
+            // Show fare and travel time info
+            val fareInfo = "Fare: ₱${route.fare}"
+            val timeInfo = if (route.estimatedTravelTimeInSeconds != null) {
+                val minutes = route.estimatedTravelTimeInSeconds / 60
+                " • ${minutes} min"
+            } else ""
+            
+            binding.textLocationInfo.text = fareInfo + timeInfo
+            binding.textLocationInfo.visibility = View.VISIBLE
 
-            if (terminal.latitude != null && terminal.longitude != null) {
-                binding.textLocationInfo.text = itemView.context.getString(R.string.location_available)
-                binding.textLocationInfo.visibility = View.VISIBLE
+            // Update favorite button
+            binding.buttonFavorite.visibility = View.VISIBLE
+            if (routeWithFavorite.isFavorite) {
+                binding.buttonFavorite.setImageResource(R.drawable.ic_bookmark_added)
+                binding.buttonFavorite.contentDescription = itemView.context.getString(R.string.favorite_remove_desc)
             } else {
-                binding.textLocationInfo.visibility = View.GONE
+                binding.buttonFavorite.setImageResource(R.drawable.ic_bookmark_add)
+                binding.buttonFavorite.contentDescription = itemView.context.getString(R.string.favorite_add_desc)
             }
 
-            binding.buttonFavorite.setImageResource(
-                if (item.isFavorite) R.drawable.ic_bookmark_added else R.drawable.ic_bookmark_add
-            )
-
-            binding.buttonFavorite.contentDescription = itemView.context.getString(
-                if (item.isFavorite) R.string.favorite_remove_desc else R.string.favorite_add_desc
-            )
-
-            binding.buttonFavorite.setOnClickListener { onToggleFavorite(item) }
-            binding.root.setOnClickListener { onTerminalClick(item) }
+            // Set click listeners
+            binding.root.setOnClickListener {
+                onRouteClick(routeWithFavorite)
+            }
+            
+            binding.buttonFavorite.setOnClickListener {
+                onFavoriteToggle(routeWithFavorite)
+            }
         }
     }
 
-    object TerminalDiffCallback : DiffUtil.ItemCallback<TerminalListItem>() {
-        override fun areItemsTheSame(oldItem: TerminalListItem, newItem: TerminalListItem): Boolean =
-            oldItem.terminal.id == newItem.terminal.id
-        override fun areContentsTheSame(oldItem: TerminalListItem, newItem: TerminalListItem): Boolean =
+    object RouteDiffCallback : DiffUtil.ItemCallback<com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite>() {
+        override fun areItemsTheSame(oldItem: com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite, newItem: com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite): Boolean =
+            oldItem.route.id == newItem.route.id
+            
+        override fun areContentsTheSame(oldItem: com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite, newItem: com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite): Boolean =
             oldItem == newItem
     }
 }

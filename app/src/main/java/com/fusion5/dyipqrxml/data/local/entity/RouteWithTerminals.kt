@@ -1,19 +1,20 @@
 package com.fusion5.dyipqrxml.data.local.entity
 
 import androidx.room.Embedded
-import androidx.room.Junction
 import androidx.room.Relation
 
 data class RouteWithTerminals(
     @Embedded val route: RouteEntity,
+    
     @Relation(
-        parentColumn = "id",
-        entityColumn = "id",
-        associateBy = Junction(
-            value = RouteTerminalCrossRef::class,
-            parentColumn = "routeId",
-            entityColumn = "terminalId"
-        )
+        parentColumn = "start_terminal_id",
+        entityColumn = "id"
     )
-    val terminals: List<TerminalEntity>
+    val startTerminal: TerminalEntity,
+
+    @Relation(
+        parentColumn = "end_terminal_id",
+        entityColumn = "id"
+    )
+    val endTerminal: TerminalEntity
 )

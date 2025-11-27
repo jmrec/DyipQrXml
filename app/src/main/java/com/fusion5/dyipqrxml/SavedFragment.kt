@@ -42,12 +42,12 @@ class SavedFragment : Fragment() {
 
     private fun setupRecyclerView() {
         adapter = SavedAdapter(
-            onTerminalClick = { terminal ->
-                // TODO: Navigate to terminal details
+            onRouteClick = { route ->
+                // TODO: Navigate to route details
             },
-            onRemoveFavorite = { terminal ->
+            onRemoveFavorite = { route ->
                 lifecycleScope.launch {
-                    viewModel.removeFavorite(terminal.id)
+                    viewModel.removeFavorite(route.id)
                 }
             }
         )

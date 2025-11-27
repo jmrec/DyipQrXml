@@ -1,13 +1,7 @@
+// This file should be deleted, but writing empty/dummy content first to avoid build errors if referenced until fully cleaned.
 package com.fusion5.dyipqrxml.data.local.entity
 
-import androidx.room.Entity
-import androidx.room.Index
-
-@Entity(
-    tableName = "route_terminal_cross_ref",
-    primaryKeys = ["routeId", "terminalId"],
-    indices = [Index(value = ["terminalId"]), Index(value = ["routeId"])]
-)
+// Deprecated
 data class RouteTerminalCrossRef(
     val routeId: Long,
     val terminalId: Long

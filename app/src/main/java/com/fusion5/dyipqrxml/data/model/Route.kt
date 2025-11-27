@@ -2,12 +2,15 @@ package com.fusion5.dyipqrxml.data.model
 
 data class Route(
     val id: Long,
-    val terminalIds: List<Long>,
-    val name: String,
-    val destination: String,
+    val startTerminalId: Long,
+    val endTerminalId: Long,
+    val routeCode: String,
     val fare: Double,
-    val estimatedTime: String,
-    val frequency: String,
-    val routeGeoJson: String?,
-    val createdAt: Long
+    val estimatedTravelTimeInSeconds: Long?,
+    val frequency: Int,
+    val routeGeoJson: String,
+    val createdAt: String,
+    val updatedAt: String,
+    val startTerminalName: String = "",
+    val endTerminalName: String = ""
 )

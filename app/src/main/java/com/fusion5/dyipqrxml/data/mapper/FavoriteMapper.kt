@@ -6,8 +6,7 @@ import com.fusion5.dyipqrxml.data.model.Favorite
 fun FavoriteEntity.toDomain() = Favorite(
     id = id,
     userId = userId,
-    terminalId = terminalId,
     routeId = routeId,
-    createdAt = createdAt
+    createdAt = createdAt,
+    updatedAt = updatedAt
 )
-

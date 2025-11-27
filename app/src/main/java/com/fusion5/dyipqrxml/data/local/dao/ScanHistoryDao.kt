@@ -9,10 +9,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ScanHistoryDao {
-    @Query("SELECT * FROM scan_history WHERE userId = :userId ORDER BY scannedAt DESC")
+    @Query("SELECT * FROM ScanHistories WHERE user_id = :userId ORDER BY created_at DESC")
     fun observeHistory(userId: Long?): Flow<List<ScanHistoryEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(history: ScanHistoryEntity)
 }
-

@@ -7,6 +7,6 @@ fun ScanHistoryEntity.toDomain() = ScanHistory(
     id = id,
     userId = userId,
     content = content,
-    scannedAt = scannedAt
+    createdAt = createdAt,
+    updatedAt = updatedAt
 )
-

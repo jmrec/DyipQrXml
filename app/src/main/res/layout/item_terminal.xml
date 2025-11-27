@@ -24,33 +24,33 @@
             android:layout_alignParentLeft="true"
             android:layout_marginEnd="48dp">
 
-            <!-- Terminal Name -->
+            <!-- Route Code -->
             <TextView
                 android:id="@+id/textTerminalName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Terminal Name"
+                android:text="Route Code"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="4dp" />
 
-            <!-- Terminal Description -->
+            <!-- Route Description (Start → End) -->
             <TextView
                 android:id="@+id/textTerminalDescription"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Terminal description goes here"
+                android:text="Start → End Terminal"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="14sp"
                 android:layout_marginBottom="8dp" />
 
-            <!-- Location Info -->
+            <!-- Route Info (Fare and Travel Time) -->
             <TextView
                 android:id="@+id/textLocationInfo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📍 Location available"
+                android:text="Fare: ₱0.00 • 0 min"
                 android:textColor="?attr/colorPrimary"
                 android:textSize="12sp"
                 android:drawablePadding="4dp" />

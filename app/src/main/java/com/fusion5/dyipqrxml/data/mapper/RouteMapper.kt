@@ -6,23 +6,28 @@ import com.fusion5.dyipqrxml.data.model.Route
 
 fun RouteWithTerminals.toDomain(): Route = Route(
     id = route.id,
-    terminalIds = terminals.map { it.id },
-    name = route.name,
-    destination = route.destination,
+    startTerminalId = startTerminal.id,
+    endTerminalId = endTerminal.id,
+    routeCode = route.routeCode,
     fare = route.fare,
-    estimatedTime = route.estimatedTime,
+    estimatedTravelTimeInSeconds = route.estimatedTravelTimeInSeconds,
     frequency = route.frequency,
     routeGeoJson = route.routeGeoJson,
-    createdAt = route.createdAt
+    createdAt = route.createdAt,
+    updatedAt = route.updatedAt,
+    startTerminalName = startTerminal.name,
+    endTerminalName = endTerminal.name
 )
 
 fun Route.toEntity(): RouteEntity = RouteEntity(
     id = id,
-    name = name,
-    destination = destination,
+    startTerminalId = startTerminalId,
+    endTerminalId = endTerminalId,
+    routeCode = routeCode,
     fare = fare,
-    estimatedTime = estimatedTime,
+    estimatedTravelTimeInSeconds = estimatedTravelTimeInSeconds,
     frequency = frequency,
     routeGeoJson = routeGeoJson,
-    createdAt = createdAt
+    createdAt = createdAt,
+    updatedAt = updatedAt
 )

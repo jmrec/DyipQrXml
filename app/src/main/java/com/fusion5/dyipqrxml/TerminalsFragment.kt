@@ -9,7 +9,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fusion5.dyipqrxml.databinding.FragmentTerminalsBinding
-import com.fusion5.dyipqrxml.ui.terminals.TerminalListItem
 import com.fusion5.dyipqrxml.ui.terminals.TerminalsAdapter
 import com.fusion5.dyipqrxml.ui.terminals.TerminalsViewModel
 import com.fusion5.dyipqrxml.ui.terminals.TerminalsViewModelFactory
@@ -44,11 +43,12 @@ class TerminalsFragment : Fragment() {
 
     private fun setupRecyclerView() {
         adapter = TerminalsAdapter(
-            onTerminalClick = { item ->
-                // TODO navigate using item.terminal
+            onRouteClick = { routeWithFavorite ->
+                // TODO: Navigate to route details
+                // For now, we can show a toast or handle route click
             },
-            onToggleFavorite = { item ->
-                viewModel.toggleFavorite(item.terminal.id)
+            onFavoriteToggle = { routeWithFavorite ->
+                viewModel.toggleFavorite(routeWithFavorite.route.id)
             }
         )
         binding.recyclerTerminals.layoutManager = LinearLayoutManager(requireContext())
@@ -58,19 +58,19 @@ class TerminalsFragment : Fragment() {
     private fun setupObservers() {
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
-                adapter.submitList(state.items)
+                adapter.submitList(state.routes)
                 binding.progressBar.visibility = if (state.isLoading) View.VISIBLE else View.GONE
                 binding.textError.visibility = if (state.errorMessage != null) View.VISIBLE else View.GONE
                 binding.textError.text = state.errorMessage
                 binding.layoutEmptyState.visibility =
-                    if (state.items.isEmpty() && !state.isLoading) View.VISIBLE else View.GONE
+                    if (state.routes.isEmpty() && !state.isLoading) View.VISIBLE else View.GONE
             }
         }
     }
 
     private fun setupClickListeners() {
         binding.buttonRefresh.setOnClickListener {
-            // Refresh terminal list
+            // Refresh route list
             binding.recyclerTerminals.smoothScrollToPosition(0)
         }
 

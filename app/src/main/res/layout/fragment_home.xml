@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="top"
         android:orientation="vertical"
-        android:padding="16dp"
+        android:padding="10dp"
         android:gravity="top">
 
         <!-- Search Bar -->
@@ -29,13 +29,14 @@
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="3dp"
-            app:cardBackgroundColor="?attr/colorSurface">
+            app:cardBackgroundColor="?attr/colorSurface"
+            android:alpha="0.7"> <!-- Make search field transparent -->
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:padding="16dp"
+                android:padding="12dp"
                 android:gravity="center_vertical">
 
                 <ImageView
@@ -68,27 +69,27 @@
             app:cardElevation="3dp"
             app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
-<!--            <LinearLayout-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:orientation="vertical"-->
-<!--                android:padding="16dp">-->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-<!--                <TextView-->
-<!--                    android:layout_width="match_parent"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:text="🚌 Baguio Jeepney Routes"-->
-<!--                    android:textSize="18sp"-->
-<!--                    android:textStyle="bold" />-->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🚌 Baguio Jeepney Routes"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
-<!--                <TextView-->
-<!--                    android:layout_width="match_parent"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:text="Find your way around the Summer Capital"-->
-<!--                    android:textSize="14sp"-->
-<!--                    android:layout_marginTop="4dp" />-->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Find your way around the Summer Capital"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp" />
 
-<!--            </LinearLayout>-->
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
@@ -103,7 +104,8 @@
         android:visibility="gone"
         app:cardCornerRadius="16dp"
         app:cardElevation="6dp"
-        app:cardBackgroundColor="?attr/colorPrimaryContainer">
+        app:cardBackgroundColor="?attr/colorPrimaryContainer"
+        android:alpha="0.7"> <!-- Make modal more transparent -->
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -111,14 +113,35 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <TextView
-                android:id="@+id/textRouteName"
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Baguio Jeepney Route"
-                android:textColor="?attr/colorOnPrimaryContainer"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/textRouteName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@+id/buttonFavoriteRoute"
+                    android:layout_toLeftOf="@+id/buttonFavoriteRoute"
+                    android:text="Baguio Jeepney Route"
+                    android:textColor="?attr/colorOnPrimaryContainer"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/buttonFavoriteRoute"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_alignParentRight="true"
+                    android:contentDescription="Save route"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_bookmark_add"
+                    android:tint="?attr/colorOnPrimaryContainer" />
+
+            </RelativeLayout>
 
             <TextView
                 android:id="@+id/textRouteDestination"

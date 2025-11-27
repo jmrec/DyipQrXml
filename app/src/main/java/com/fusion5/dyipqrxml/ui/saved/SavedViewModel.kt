@@ -2,10 +2,13 @@ package com.fusion5.dyipqrxml.ui.saved
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fusion5.dyipqrxml.data.model.Route
 import com.fusion5.dyipqrxml.data.model.Terminal
 import com.fusion5.dyipqrxml.data.repository.AuthRepository
 import com.fusion5.dyipqrxml.data.repository.FavoriteRepository
+import com.fusion5.dyipqrxml.data.repository.RouteRepository
 import com.fusion5.dyipqrxml.data.repository.TerminalRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SavedUiState(
-    val favorites: List<Terminal> = emptyList(),
+    val favorites: List<Route> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isUserLoggedIn: Boolean = false
@@ -25,7 +28,7 @@ data class SavedUiState(
 class SavedViewModel(
     private val authRepository: AuthRepository,
     private val favoriteRepository: FavoriteRepository,
-    private val terminalRepository: TerminalRepository
+    private val routeRepository: RouteRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SavedUiState())
@@ -35,6 +38,7 @@ class SavedViewModel(
         observeUserAndFavorites()
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeUserAndFavorites() {
         viewModelScope.launch {
             authRepository.currentUser
@@ -43,11 +47,12 @@ class SavedViewModel(
                         flowOf(SavedUiState(isUserLoggedIn = false))
                     } else {
                         favoriteRepository.observeFavorites(user.id)
-                            .combine(terminalRepository.observeAll()) { favorites, terminals ->
-                                val terminalMap = terminals.associateBy { it.id }
-                                val favTerminals = favorites.mapNotNull { f -> f.terminalId?.let { terminalMap[it] } }
+                            .combine(routeRepository.observeAllRoutesWithTerminals()) { favorites, routes ->
+                                val favoriteRoutes = favorites.mapNotNull { favorite ->
+                                    routes.find { it.id == favorite.routeId }
+                                }
                                 SavedUiState(
-                                    favorites = favTerminals,
+                                    favorites = favoriteRoutes,
                                     isUserLoggedIn = true
                                 )
                             }
@@ -57,10 +62,10 @@ class SavedViewModel(
         }
     }
 
-    suspend fun removeFavorite(terminalId: Long) {
+    suspend fun removeFavorite(routeId: Long) {
         authRepository.currentUser.collect { currentUser ->
             if (currentUser != null) {
-                favoriteRepository.removeFavoriteByTerminal(currentUser.id, terminalId)
+                favoriteRepository.removeFavoriteByRoute(currentUser.id, routeId)
             }
         }
     }

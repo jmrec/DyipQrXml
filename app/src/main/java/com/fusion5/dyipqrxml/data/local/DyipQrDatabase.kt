@@ -11,24 +11,24 @@ import com.fusion5.dyipqrxml.data.local.dao.TerminalDao
 import com.fusion5.dyipqrxml.data.local.dao.UserDao
 import com.fusion5.dyipqrxml.data.local.entity.FavoriteEntity
 import com.fusion5.dyipqrxml.data.local.entity.RouteEntity
-import com.fusion5.dyipqrxml.data.local.entity.RouteTerminalCrossRef
 import com.fusion5.dyipqrxml.data.local.entity.ScanHistoryEntity
 import com.fusion5.dyipqrxml.data.local.entity.TerminalEntity
 import com.fusion5.dyipqrxml.data.local.entity.UserEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
         UserEntity::class,
         TerminalEntity::class,
         RouteEntity::class,
-        RouteTerminalCrossRef::class,
         FavoriteEntity::class,
         ScanHistoryEntity::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class DyipQrDatabase : RoomDatabase() {
@@ -52,7 +52,8 @@ abstract class DyipQrDatabase : RoomDatabase() {
                 context,
                 DyipQrDatabase::class.java,
                 "dyipqr.db"
-            ).fallbackToDestructiveMigration()
+            )
+                .addMigrations(MIGRATION_5_6)
                 .build()
             CoroutineScope(Dispatchers.IO).launch {
                 DatabaseSeeder(context).seed(db)

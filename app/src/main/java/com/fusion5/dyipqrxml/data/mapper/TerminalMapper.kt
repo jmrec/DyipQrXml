@@ -8,6 +8,7 @@ fun TerminalEntity.toDomain() = Terminal(
     name = name,
     description = description,
     latitude = latitude,
-    longitude = longitude
+    longitude = longitude,
+    createdAt = createdAt,
+    updatedAt = updatedAt
 )
-

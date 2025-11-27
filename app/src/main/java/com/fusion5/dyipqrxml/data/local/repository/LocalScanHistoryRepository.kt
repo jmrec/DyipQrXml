@@ -15,10 +15,15 @@ class LocalScanHistoryRepository(
         scanHistoryDao.observeHistory(userId).map { list -> list.map { it.toDomain() } }
 
     override suspend fun saveScan(content: String, userId: Long?) {
+        val timestamp = System.currentTimeMillis().let { millis ->
+            java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(millis))
+        }
         scanHistoryDao.insert(
             ScanHistoryEntity(
-                userId = userId,
-                content = content
+                userId = (userId ?: 0L),
+                content = content,
+                createdAt = timestamp,
+                updatedAt = timestamp
             )
         )
     }

@@ -9,22 +9,21 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FavoriteDao {
-    @Query("SELECT * FROM favorites WHERE userId = :userId ORDER BY createdAt DESC")
+    @Query("SELECT * FROM Favorites WHERE user_id = :userId ORDER BY created_at DESC")
     fun observeFavorites(userId: Long): Flow<List<FavoriteEntity>>
 
-    @Query("SELECT * FROM favorites WHERE userId = :userId AND terminalId = :terminalId LIMIT 1")
-    suspend fun getFavorite(userId: Long, terminalId: Long): FavoriteEntity?
+    @Query("SELECT * FROM Favorites WHERE user_id = :userId AND route_id = :routeId LIMIT 1")
+    suspend fun getFavorite(userId: Long, routeId: Long): FavoriteEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(favorite: FavoriteEntity)
 
-    @Query("DELETE FROM favorites WHERE id = :id")
+    @Query("DELETE FROM Favorites WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("DELETE FROM favorites WHERE userId = :userId AND terminalId = :terminalId")
-    suspend fun deleteByTerminal(userId: Long, terminalId: Long)
+    @Query("DELETE FROM Favorites WHERE user_id = :userId AND route_id = :routeId")
+    suspend fun deleteByRoute(userId: Long, routeId: Long)
 
-    @Query("SELECT COUNT(*) FROM favorites WHERE userId = :userId AND terminalId = :terminalId")
-    suspend fun isFavorite(userId: Long, terminalId: Long): Int
+    @Query("SELECT COUNT(*) FROM Favorites WHERE user_id = :userId AND route_id = :routeId")
+    suspend fun isFavorite(userId: Long, routeId: Long): Int
 }
-

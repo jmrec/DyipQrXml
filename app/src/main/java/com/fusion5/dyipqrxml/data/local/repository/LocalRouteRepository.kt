@@ -18,10 +18,10 @@ class LocalRouteRepository(
 
     override fun search(query: String): Flow<List<Route>> =
         routeDao.searchRoutesWithTerminals(query).map { list -> list.map { it.toDomain() } }
-    
-    // Kept for backward compatibility if needed, but filtering now happens in memory or via specific query if needed
-    fun observeRoutesByTerminal(terminalId: Long): Flow<List<Route>> =
-        observeAll().map { routes -> 
-            routes.filter { it.terminalIds.contains(terminalId) } 
-        }
+
+    override fun observeAllRoutesWithTerminals(): Flow<List<Route>> =
+        routeDao.observeAllRoutesWithTerminals().map { list -> list.map { it.toDomain() } }
+
+    override fun searchRoutesWithTerminals(query: String): Flow<List<Route>> =
+        routeDao.searchRoutesWithTerminals(query).map { list -> list.map { it.toDomain() } }
 }

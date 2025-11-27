@@ -20,9 +20,9 @@ class LocalFavoriteRepository(
             FavoriteEntity(
                 id = favorite.id,
                 userId = favorite.userId,
-                terminalId = favorite.terminalId,
                 routeId = favorite.routeId,
-                createdAt = favorite.createdAt
+                createdAt = favorite.createdAt,
+                updatedAt = favorite.updatedAt
             )
         )
     }
@@ -31,10 +31,10 @@ class LocalFavoriteRepository(
         favoriteDao.deleteById(favoriteId)
     }
 
-    override suspend fun removeFavoriteByTerminal(userId: Long, terminalId: Long) {
-        favoriteDao.deleteByTerminal(userId, terminalId)
+    override suspend fun removeFavoriteByRoute(userId: Long, routeId: Long) {
+        favoriteDao.deleteByRoute(userId, routeId)
     }
 
-    override suspend fun isFavorite(userId: Long, terminalId: Long): Boolean =
-        favoriteDao.isFavorite(userId, terminalId) > 0
+    override suspend fun isFavorite(userId: Long, routeId: Long): Boolean =
+        favoriteDao.isFavorite(userId, routeId) > 0
 }
