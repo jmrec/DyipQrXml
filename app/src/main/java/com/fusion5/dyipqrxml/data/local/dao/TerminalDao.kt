@@ -12,6 +12,9 @@ interface TerminalDao {
     @Query("SELECT * FROM terminals ORDER BY name")
     fun observeAll(): Flow<List<TerminalEntity>>
 
+    @Query("SELECT * FROM terminals")
+    suspend fun getAllList(): List<TerminalEntity>
+
     @Query("SELECT * FROM terminals WHERE name LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY name")
     fun search(query: String): Flow<List<TerminalEntity>>
 

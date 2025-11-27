@@ -4,6 +4,7 @@ import com.fusion5.dyipqrxml.data.model.Route
 import kotlinx.coroutines.flow.Flow
 
 interface RouteRepository {
-    fun observeRoutesByTerminal(terminalId: Long): Flow<List<Route>>
+    fun observeAll(): Flow<List<Route>>
     suspend fun getById(id: Long): Route?
+    fun search(query: String): Flow<List<Route>>
 }

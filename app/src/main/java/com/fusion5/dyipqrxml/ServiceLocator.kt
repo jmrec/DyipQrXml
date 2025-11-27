@@ -8,12 +8,12 @@ import com.fusion5.dyipqrxml.data.repository.RouteRepository
 import com.fusion5.dyipqrxml.data.repository.ScanHistoryRepository
 import com.fusion5.dyipqrxml.data.repository.SessionRepository
 import com.fusion5.dyipqrxml.data.repository.TerminalRepository
-import com.fusion5.dyipqrxml.data.repository.local.DataStoreSessionRepository
-import com.fusion5.dyipqrxml.data.repository.local.LocalAuthRepository
-import com.fusion5.dyipqrxml.data.repository.local.LocalFavoriteRepository
-import com.fusion5.dyipqrxml.data.repository.local.LocalRouteRepository
-import com.fusion5.dyipqrxml.data.repository.local.LocalScanHistoryRepository
-import com.fusion5.dyipqrxml.data.repository.local.LocalTerminalRepository
+import com.fusion5.dyipqrxml.data.local.repository.DataStoreSessionRepository
+import com.fusion5.dyipqrxml.data.local.repository.LocalAuthRepository
+import com.fusion5.dyipqrxml.data.local.repository.LocalFavoriteRepository
+import com.fusion5.dyipqrxml.data.local.repository.LocalRouteRepository
+import com.fusion5.dyipqrxml.data.local.repository.LocalScanHistoryRepository
+import com.fusion5.dyipqrxml.data.local.repository.LocalTerminalRepository
 import com.fusion5.dyipqrxml.util.PasswordHasher
 
 object ServiceLocator {

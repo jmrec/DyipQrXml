@@ -2,6 +2,8 @@ plugins {
 	alias(libs.plugins.android.application)
 	alias(libs.plugins.kotlin.android)
 	kotlin("kapt")
+//	alias(libs.plugins.google.android.libraries.mapsplatform.secrets.gradle.plugin)
+	alias(libs.plugins.secrets.gradle.plugin)
 }
 
 android {
@@ -36,6 +38,11 @@ android {
 	}
 	buildFeatures {
 		viewBinding = true
+		buildConfig = true
+	}
+	secrets {
+		propertiesFileName = "secrets.properties"
+		defaultPropertiesFileName = "local.defaults.properties"
 	}
 }
 
@@ -66,11 +73,13 @@ dependencies {
 	implementation(libs.androidx.datastore.preferences)
 
 	// ML Kit Barcode Scanning for QR codes
-	implementation("com.google.mlkit:barcode-scanning:17.2.0")
+	implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
 	// Google Maps and Location Services
-	implementation("com.google.android.gms:play-services-maps:18.2.0")
-	implementation("com.google.android.gms:play-services-location:21.0.1")
+	implementation(libs.play.services.maps)
+	implementation("com.google.android.gms:play-services-location:21.3.0")
+    // Maps Utils for GeoJSON
+    implementation("com.google.maps.android:android-maps-utils:3.8.2")
 
 	testImplementation(libs.junit)
 	androidTestImplementation(libs.androidx.junit)

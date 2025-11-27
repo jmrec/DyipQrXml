@@ -1,4 +1,4 @@
-package com.fusion5.dyipqrxml.data.repository.local
+package com.fusion5.dyipqrxml.data.local.repository
 
 import com.fusion5.dyipqrxml.data.local.dao.ScanHistoryDao
 import com.fusion5.dyipqrxml.data.local.entity.ScanHistoryEntity

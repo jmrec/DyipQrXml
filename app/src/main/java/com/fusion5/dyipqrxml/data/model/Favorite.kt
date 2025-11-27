@@ -1,4 +1,4 @@
-package com.fusion5.dyipqrxml.data.model
+	package com.fusion5.dyipqrxml.data.model
 
 data class Favorite(
     val id: Long,

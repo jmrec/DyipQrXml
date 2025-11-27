@@ -36,7 +36,6 @@ class QRCodeAnalyzer(private val onQRCodeScanned: (String) -> Unit) : ImageAnaly
                     Log.e("QRCodeAnalyzer", "Barcode scanning failed", e)
                 }
                 .addOnCompleteListener {
-                    // Always close the image proxy
                     imageProxy.close()
                 }
         } catch (e: Exception) {

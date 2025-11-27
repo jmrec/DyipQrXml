@@ -1,4 +1,4 @@
-package com.fusion5.dyipqrxml.data.repository.local
+package com.fusion5.dyipqrxml.data.local.repository
 
 import android.content.Context
 import androidx.datastore.core.DataStore

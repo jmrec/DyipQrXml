@@ -1,17 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:context=".HomeFragment">
 
-    <!-- Map Fragment -->
+    <!-- Google Map -->
     <fragment
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Baguio Route Information Panel -->
+    <!-- TOP STACK (Search bar + Welcome card) -->
+    <LinearLayout
+        android:id="@+id/topStack"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="top">
+
+        <!-- Search Bar -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_search"
+                    app:tint="?attr/colorPrimary"
+                    android:layout_marginEnd="12dp" />
+
+                <EditText
+                    android:id="@+id/editSearch"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Search Baguio jeepney routes…"
+                    android:background="@null"
+                    android:maxLines="1"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Welcome Banner -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardWelcome"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant">
+
+<!--            <LinearLayout-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:orientation="vertical"-->
+<!--                android:padding="16dp">-->
+
+<!--                <TextView-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:text="🚌 Baguio Jeepney Routes"-->
+<!--                    android:textSize="18sp"-->
+<!--                    android:textStyle="bold" />-->
+
+<!--                <TextView-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:text="Find your way around the Summer Capital"-->
+<!--                    android:textSize="14sp"-->
+<!--                    android:layout_marginTop="4dp" />-->
+
+<!--            </LinearLayout>-->
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+    <!-- ROUTE INFO (BOTTOM PANEL) -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardRouteInfo"
         android:layout_width="match_parent"
@@ -20,8 +102,8 @@
         android:layout_margin="16dp"
         android:visibility="gone"
         app:cardCornerRadius="16dp"
-        app:cardElevation="8dp"
-        app:cardBackgroundColor="?attr/colorPrimary">
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="?attr/colorPrimaryContainer">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -34,7 +116,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Baguio Jeepney Route"
-                android:textColor="@android:color/white"
+                android:textColor="?attr/colorOnPrimaryContainer"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
@@ -43,7 +125,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Destination"
-                android:textColor="@android:color/white"
+                android:textColor="?attr/colorOnPrimaryContainer"
                 android:textSize="16sp"
                 android:layout_marginTop="4dp" />
 
@@ -59,7 +141,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Fare: ₱13.00"
-                    android:textColor="@android:color/white"
+                    android:textColor="?attr/colorOnPrimaryContainer"
                     android:textSize="14sp" />
 
                 <TextView
@@ -68,117 +150,49 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Time: 15 min"
-                    android:textColor="@android:color/white"
+                    android:textColor="?attr/colorOnPrimaryContainer"
                     android:textSize="14sp" />
 
             </LinearLayout>
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonViewRoutes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="View All Baguio Routes"
-                android:textColor="?attr/colorPrimary"
-                android:backgroundTint="@android:color/white"
-                style="@style/Widget.Material3.Button" />
+                style="@style/Widget.MaterialComponents.Button" />
 
         </LinearLayout>
-
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Baguio Quick Actions -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabCurrentLocation"
+    <!-- FAB STACK (BOTTOM RIGHT) -->
+    <LinearLayout
+        android:id="@+id/fabStack"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:src="@drawable/ic_directions_bus"
-        app:tint="@android:color/white"
-        app:backgroundTint="?attr/colorPrimary" />
+        android:orientation="vertical"
+        android:gravity="end"
+        android:layout_margin="16dp">
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabAddRoute"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginBottom="80dp"
-        android:src="@drawable/ic_route"
-        app:tint="@android:color/white"
-        app:backgroundTint="?attr/colorPrimary" />
-
-    <!-- Baguio Search Bar -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="6dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabAddRoute"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="16dp"
-            android:gravity="center_vertical">
+            android:src="@drawable/ic_route"
+            app:tint="@android:color/white"
+            app:backgroundTint="?attr/colorPrimary"
+            android:layout_marginBottom="12dp" />
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_search"
-                android:tint="?attr/colorPrimary"
-                android:layout_marginEnd="12dp" />
-
-            <EditText
-                android:id="@+id/editSearch"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Search Baguio jeepney routes..."
-                android:background="@null"
-                android:maxLines="1"
-                android:textSize="16sp" />
-
-        </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- Baguio Welcome Banner -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:layout_margin="16dp"
-        android:layout_marginTop="80dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        android:visibility="visible"
-        android:id="@+id/cardWelcome">
-
-        <LinearLayout
-            android:layout_width="match_parent"
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabCurrentLocation"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:src="@drawable/ic_directions_bus"
+            app:tint="@android:color/white"
+            app:backgroundTint="?attr/colorPrimary" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="🚌 Baguio Jeepney Routes"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Find your way around the Summer Capital"
-                android:textSize="14sp"
-                android:layout_marginTop="4dp" />
-
-        </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

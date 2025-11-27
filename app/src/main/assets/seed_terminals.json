@@ -1,21 +1,44 @@
 [
   {
-    "name": "Mines View Park",
-    "description": "Scenic overlook terminal serving northern routes.",
-    "latitude": 16.4218,
-    "longitude": 120.638
+    "name": "Camp 7",
+    "description": "Terminal at Camp 7.",
+    "terminals": [
+      {
+        "latitude": 16.382133484022376,
+        "longitude": 120.60545319786581
+      },
+      {
+        "latitude": 16.41246081490246,
+        "longitude": 120.59585904396317
+      }
+    ]
   },
   {
-    "name": "Burnham Park",
-    "description": "Central terminal beside the park for downtown routes.",
-    "latitude": 16.4115,
-    "longitude": 120.5954
+    "name": "City Camp",
+    "description": "Terminal at City Camp.",
+    "terminals": [
+      {
+        "latitude": 16.41306279268963,
+        "longitude": 120.59404567682509
+      },
+      {
+        "latitude": 16.41095138206917,
+        "longitude": 120.58913435997101
+      }
+    ]
   },
   {
-    "name": "Session Road",
-    "description": "Main commercial strip with multiple jeepney stops.",
-    "latitude": 16.4146,
-    "longitude": 120.596
+    "name": "Leonila Hill",
+    "description": "Terminal at Leonila Hill.",
+    "terminals": [
+      {
+        "latitude": 16.414118391517803,
+        "longitude": 120.59553409505628
+      },
+      {
+        "latitude": 16.427834324627412,
+        "longitude": 120.60155842441526
+      }
+    ]
   }
 ]
-

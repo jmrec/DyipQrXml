@@ -11,6 +11,7 @@ import com.fusion5.dyipqrxml.data.local.dao.TerminalDao
 import com.fusion5.dyipqrxml.data.local.dao.UserDao
 import com.fusion5.dyipqrxml.data.local.entity.FavoriteEntity
 import com.fusion5.dyipqrxml.data.local.entity.RouteEntity
+import com.fusion5.dyipqrxml.data.local.entity.RouteTerminalCrossRef
 import com.fusion5.dyipqrxml.data.local.entity.ScanHistoryEntity
 import com.fusion5.dyipqrxml.data.local.entity.TerminalEntity
 import com.fusion5.dyipqrxml.data.local.entity.UserEntity
@@ -23,10 +24,11 @@ import kotlinx.coroutines.launch
         UserEntity::class,
         TerminalEntity::class,
         RouteEntity::class,
+        RouteTerminalCrossRef::class,
         FavoriteEntity::class,
         ScanHistoryEntity::class
     ],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 abstract class DyipQrDatabase : RoomDatabase() {
