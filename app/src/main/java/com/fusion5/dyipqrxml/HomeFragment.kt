@@ -23,6 +23,7 @@ import com.fusion5.dyipqrxml.data.local.DyipQrDatabase
 import com.fusion5.dyipqrxml.data.local.entity.RouteWithTerminals
 import com.fusion5.dyipqrxml.data.local.repository.LocalTerminalRepository
 import com.fusion5.dyipqrxml.data.model.Favorite
+import com.fusion5.dyipqrxml.data.model.Terminal
 import com.fusion5.dyipqrxml.data.repository.AuthRepository
 import com.fusion5.dyipqrxml.data.repository.FavoriteRepository
 import com.fusion5.dyipqrxml.data.repository.RouteRepository
@@ -41,11 +42,14 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.maps.android.data.geojson.GeoJsonLayer
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.gms.maps.model.Dash
+import com.google.android.gms.maps.model.Gap
+import com.google.android.gms.maps.model.PatternItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -53,6 +57,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.*
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
@@ -78,6 +85,39 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     
     private var currentDisplayedRoute: RouteWithTerminals? = null
     private var selectedRouteLayer: GeoJsonLayer? = null
+    
+    // Favorites toggle state
+    private var isShowingFavorites = false
+    
+    // Current location
+    private var currentUserLocation: LatLng? = null
+    private var currentLocationMarker: Marker? = null
+    
+    // Nearest routes tracking
+    private val nearestRoutes = mutableListOf<RouteWithDistance>()
+    private var isShowingNearestRoutes = false
+    data class RouteWithDistance(val route: RouteWithTerminals, val distance: Double)
+    
+    // Walking path polyline
+    private var walkingPathPolyline: Polyline? = null
+    
+    // Route color cache for consistent coloring
+    private val routeColorCache = mutableMapOf<String, Int>()
+    
+    // HTTP client for Directions API
+    private val httpClient = OkHttpClient()
+    
+    // Toast debouncing
+    private var lastToastTime = 0L
+    private val toastDebounceDelay = 1000L // 1 second
+    
+    private fun showDebouncedToast(message: String) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastToastTime > toastDebounceDelay) {
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+            lastToastTime = currentTime
+        }
+    }
 
     // Baguio center coordinates
     private val baguioCenter = LatLng(16.4023, 120.5960)
@@ -109,11 +149,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         checkLocationPermission()
         
         // Hide welcome banner after 5 seconds
-        view.postDelayed({
-            if (isAdded && _binding != null) {
-                binding.cardWelcome.visibility = View.GONE
-            }
-        }, 3000)
+//        view.postDelayed({
+//            if (isAdded && _binding != null) {
+//                binding.cardWelcome.visibility = View.GONE
+//            }
+//        }, 3000)
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -121,14 +161,31 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         googleMap = map
         
         // Enable basic map features
-        googleMap.uiSettings.isZoomControlsEnabled = true
+        googleMap.uiSettings.isZoomControlsEnabled = false // Hide zoom controls
         googleMap.uiSettings.isCompassEnabled = true
-        googleMap.uiSettings.isMyLocationButtonEnabled = false
+        googleMap.uiSettings.isMyLocationButtonEnabled = true // Enable built-in location button
         googleMap.setOnMarkerClickListener(this)
+        
+        // Enable the blue dot for current location (requires location permission)
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED) {
+            googleMap.isMyLocationEnabled = true
+        }
         
         // Add map click listener to clear selection
         googleMap.setOnMapClickListener {
             clearRouteSelection()
+        }
+        
+        // Add location button click listener to zoom to user location
+        googleMap.setOnMyLocationButtonClickListener {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+                getCurrentLocation()
+            } else {
+                requestLocationPermission()
+            }
+            true // Return true to indicate we handled the click
         }
         
         // Add map style for better visibility
@@ -176,13 +233,228 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
     
+    private fun toggleFavoritesView() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (!isShowingFavorites) {
+                // Check if user is logged in before showing favorites
+                val currentUser = authRepository.currentUser.first()
+                if (currentUser == null) {
+                    // Show login prompt
+                    withContext(Dispatchers.Main) {
+                        showLoginPromptForFavorites()
+                    }
+                    return@launch
+                }
+            }
+            
+            isShowingFavorites = !isShowingFavorites
+            
+            // Update FAB appearance
+            withContext(Dispatchers.Main) {
+                if (isShowingFavorites) {
+                    binding.fabFavoritesToggle.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.favorite_active)
+                    showDebouncedToast("Showing favorite routes only")
+                } else {
+                    binding.fabFavoritesToggle.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.secondary)
+                    showDebouncedToast("Showing all routes")
+                }
+                
+                // Refresh the displayed routes
+                displayRoutesFromDb()
+            }
+        }
+    }
+    
+    private fun showLoginPromptForFavorites() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Login Required")
+            .setMessage("You need to be logged in to view your favorite routes. Would you like to log in or create an account?")
+            .setPositiveButton("Log In") { dialog, _ ->
+                findNavController().navigate(R.id.action_home_to_login)
+                dialog.dismiss()
+            }
+            .setNegativeButton("Sign Up") { dialog, _ ->
+                findNavController().navigate(R.id.action_login_to_signup)
+                dialog.dismiss()
+            }
+            .setNeutralButton("Cancel", null)
+            .show()
+    }
+    
+    private fun toggleNearestRoutesView() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (!isShowingNearestRoutes) {
+                // Check if we have current location
+                if (currentUserLocation == null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Location not available. Please enable location services.", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+            }
+            
+            isShowingNearestRoutes = !isShowingNearestRoutes
+            
+            // Update FAB appearance
+            withContext(Dispatchers.Main) {
+                if (isShowingNearestRoutes) {
+                    binding.fabNearestRoutes.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.favorite_active)
+                    showDebouncedToast("Showing nearest routes only")
+                    
+                    // Show nearest routes panel
+                    binding.cardNearestRoutes.visibility = View.VISIBLE
+                    
+                    // If we already have location data, recalculate nearest routes
+                    if (currentUserLocation != null) {
+                        calculateNearestRoutes()
+                    } else {
+                        // Show "Finding routes..." message
+                        binding.textNearestRoutes.text = "Finding routes near you..."
+                    }
+                    
+                    // Filter to show only nearest routes
+                    filterToNearestRoutes()
+                } else {
+                    binding.fabNearestRoutes.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.secondary)
+                    showDebouncedToast("Showing all routes")
+                    
+                    // Hide nearest routes panel
+                    binding.cardNearestRoutes.visibility = View.GONE
+                    
+                    // Show all routes
+                    displayRoutesFromDb()
+                }
+            }
+        }
+    }
+    
+    private fun filterToNearestRoutes() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
+                // Clear current view
+                markers.forEach { it.remove() }
+                markers.clear()
+                routePolylines.forEach { it.remove() }
+                routePolylines.clear()
+                
+                // Show only nearest routes (top 5)
+                val routesToShow = nearestRoutes.take(5).map { it.route }
+                
+                // Create polylines for nearest routes
+                routesToShow.forEach { route ->
+                    route.route.routeGeoJson?.let { geoJson ->
+                        try {
+                            val jsonObject = JSONObject(geoJson)
+                            val features = jsonObject.getJSONArray("features")
+                            
+                            if (features.length() > 0) {
+                                val feature = features.getJSONObject(0)
+                                val geometry = feature.getJSONObject("geometry")
+                                
+                                if (geometry.getString("type") == "LineString") {
+                                    val coordinates = geometry.getJSONArray("coordinates")
+                                    val latLngList = mutableListOf<LatLng>()
+                                    
+                                    for (i in 0 until coordinates.length()) {
+                                        val coord = coordinates.getJSONArray(i)
+                                        val lng = coord.getDouble(0)
+                                        val lat = coord.getDouble(1)
+                                        latLngList.add(LatLng(lat, lng))
+                                    }
+                                    
+                                    // Create polyline for nearest route
+                                    val polyline = googleMap.addPolyline(
+                                        PolylineOptions()
+                                            .addAll(latLngList)
+                                            .color(getColorForRoute(route.route.routeCode))
+                                            .width(12f)
+                                            .clickable(true)
+                                    )
+                                    
+                                    // Store route reference in polyline tag
+                                    polyline.tag = route
+                                    routePolylines.add(polyline)
+                                    
+                                    Log.d("HomeFragment", "Added nearest route polyline: ${route.route.routeCode}")
+                                }
+                            }
+                            
+                        } catch (e: Exception) {
+                            Log.e("HomeFragment", "Error loading GeoJSON for nearest route ${route.route.routeCode}", e)
+                        }
+                    }
+                }
+                
+                // Set up polyline click listener for nearest routes
+                setupPolylineClickListener()
+                
+                // Auto-select the route if only one nearest route remains
+                if (routesToShow.size == 1) {
+                    Log.d("HomeFragment", "Auto-selecting single nearest route: ${routesToShow[0].route.routeCode}")
+                    selectRoute(routesToShow[0], null)
+                } else if (routesToShow.isNotEmpty()) {
+                    // Zoom to show all nearest routes
+                    val builder = LatLngBounds.Builder()
+                    routesToShow.forEach { route ->
+                        route.route.routeGeoJson?.let { geoJson ->
+                            try {
+                                val jsonObject = JSONObject(geoJson)
+                                val features = jsonObject.getJSONArray("features")
+                                if (features.length() > 0) {
+                                    val feature = features.getJSONObject(0)
+                                    val geometry = feature.getJSONObject("geometry")
+                                    if (geometry.getString("type") == "LineString") {
+                                        val coordinates = geometry.getJSONArray("coordinates")
+                                        if (coordinates.length() > 0) {
+                                            // Add first and last points to bounds
+                                            val firstCoord = coordinates.getJSONArray(0)
+                                            val lastCoord = coordinates.getJSONArray(coordinates.length() - 1)
+                                            builder.include(LatLng(firstCoord.getDouble(1), firstCoord.getDouble(0)))
+                                            builder.include(LatLng(lastCoord.getDouble(1), lastCoord.getDouble(0)))
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.e("HomeFragment", "Error calculating bounds for route ${route.route.routeCode}", e)
+                            }
+                        }
+                    }
+                    
+                    try {
+                        val bounds = builder.build()
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100))
+                    } catch (e: Exception) {
+                        Log.e("HomeFragment", "Error zooming to nearest routes", e)
+                        // Fallback: zoom to user location
+                        currentUserLocation?.let { location ->
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 14f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     private fun displayRoutesFromDb() {
         displayRoutesJob?.cancel()
         val database = DyipQrDatabase.getInstance(requireContext())
         val routeDao = database.routeDao()
         
         displayRoutesJob = viewLifecycleOwner.lifecycleScope.launch {
-            routeDao.observeAllRoutesWithTerminals().collect { routes ->
+            val routesFlow = if (isShowingFavorites) {
+                // Get current user and then favorite routes
+                val currentUser = authRepository.currentUser.first()
+                if (currentUser != null) {
+                    routeDao.observeFavoriteRoutesWithTerminals(currentUser.id)
+                } else {
+                    // If no user is logged in, show empty list
+                    flow { emit(emptyList<RouteWithTerminals>()) }
+                }
+            } else {
+                routeDao.observeAllRoutesWithTerminals()
+            }
+            
+            routesFlow.collect { routes ->
                 Log.d("HomeFragment", "Displaying ${routes.size} routes")
                 Log.d("HomeFragment", "Route order: ${routes.map { it.route.routeCode }}")
                 
@@ -251,6 +523,20 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 // Set up polyline click listener
                 setupPolylineClickListener()
                 
+                // Auto-select the route if only one result remains after filtering
+                if (routes.size == 1) {
+                    Log.d("HomeFragment", "=== AUTO-SELECTION TRIGGERED ===")
+                    Log.d("HomeFragment", "Auto-selecting single filtered route: ${routes[0].route.routeCode}")
+                    Log.d("HomeFragment", "Current filter state: favorites=$isShowingFavorites, nearest=$isShowingNearestRoutes")
+                    // Add small delay to prevent flickering during route display
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        delay(100) // Small delay to ensure routes are fully rendered
+                        withContext(Dispatchers.Main) {
+                            selectRoute(routes[0], null)
+                        }
+                    }
+                }
+                
                 // Add debug button to test route clickability
                 addDebugRouteTestButton()
             }
@@ -275,10 +561,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     
     private fun addDebugRouteTestButton() {
         // Add a debug button to manually test route clickability
-        binding.fabCurrentLocation.setOnLongClickListener {
-            testRouteClickability()
-            true
-        }
+//        binding.fabCurrentLocation.setOnLongClickListener {
+//            testRouteClickability()
+//            true
+//        }
     }
     
     private fun testRouteClickability() {
@@ -304,17 +590,31 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     
     
     private fun getColorForRoute(name: String): Int {
-        // Use hash-based colors for consistent assignment across all routes
-        val hash = name.hashCode()
-        val colorIndex = (hash and 0x7FFFFFFF) % 6 // Ensure positive modulo
-        return when (colorIndex) {
-            0 -> Color.BLUE
-            1 -> Color.RED
-            2 -> Color.GREEN
-            3 -> Color.MAGENTA
-            4 -> Color.CYAN
-            5 -> Color.YELLOW
-            else -> Color.BLACK
+        // Use cached colors for consistent assignment across all routes
+        return routeColorCache.getOrPut(name) {
+            val hash = name.hashCode()
+            val colorIndex = (hash and 0x7FFFFFFF) % 6 // Ensure positive modulo
+            when (colorIndex) {
+                0 -> Color.BLUE
+                1 -> Color.RED
+                2 -> Color.GREEN
+                3 -> Color.MAGENTA
+                4 -> Color.CYAN
+                5 -> Color.YELLOW
+                else -> Color.BLACK
+            }
+        }
+    }
+    
+    private fun getHueFromColor(color: Int): Float {
+        return when (color) {
+            Color.BLUE -> BitmapDescriptorFactory.HUE_BLUE
+            Color.RED -> BitmapDescriptorFactory.HUE_RED
+            Color.GREEN -> BitmapDescriptorFactory.HUE_GREEN
+            Color.MAGENTA -> BitmapDescriptorFactory.HUE_MAGENTA
+            Color.CYAN -> BitmapDescriptorFactory.HUE_CYAN
+            Color.YELLOW -> BitmapDescriptorFactory.HUE_YELLOW
+            else -> BitmapDescriptorFactory.HUE_ORANGE
         }
     }
     
@@ -362,16 +662,14 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         // Clear previous selection
         clearRouteSelection()
         
-        // Highlight the selected route (for polyline approach)
+        // Highlight the selected route (for polyline approach) - but keep original color
         routePolylines.forEach { polyline ->
             val polylineRoute = polyline.tag as? RouteWithTerminals
             if (polylineRoute?.route?.id == route.route.id) {
-                // Highlight selected route
-                polyline.color = Color.rgb(255, 165, 0) // Orange
+                // Highlight selected route with increased width but keep original color
                 polyline.width = 16f
             } else {
                 // Reset other routes
-                polyline.color = getColorForRoute(polylineRoute?.route?.routeCode ?: "")
                 polyline.width = 12f
             }
         }
@@ -384,10 +682,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
     
     private fun clearRouteSelection() {
-        // Clear route highlighting for polylines
+        // Clear route highlighting for polylines - only reset width, keep original colors
         routePolylines.forEach { polyline ->
-            val route = polyline.tag as? RouteWithTerminals
-            polyline.color = getColorForRoute(route?.route?.routeCode ?: "")
             polyline.width = 12f
         }
         
@@ -395,8 +691,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         markers.forEach { it.remove() }
         markers.clear()
         
+        // Clear walking path
+        clearWalkingPath()
+        
         // Hide route info
         binding.cardRouteInfo.visibility = View.GONE
+        binding.layoutDistanceToTerminal.visibility = View.GONE
         currentDisplayedRoute = null
     }
     
@@ -405,59 +705,67 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         
         viewLifecycleOwner.lifecycleScope.launch {
             withContext(Dispatchers.Main) {
-                // Clear ALL markers completely
+                // Clear ALL markers completely but preserve walking path
                 markers.forEach { it.remove() }
                 markers.clear()
-                googleMap.clear()
                 
-                // Re-add the routes since we cleared the map
-                displayRoutesFromDb()
+                // Don't clear and re-add routes here - this causes flickering
+                // The routes are already displayed, we just need to highlight the selected one
                 
                 // Extract terminal coordinates directly from the route GeoJSON
                 val terminalPositions = extractTerminalPositionsFromRoute(route)
                 
-                // Add start terminal marker
+                // Get route color for markers
+                val routeColor = getColorForRoute(route.route.routeCode)
+                
+                // Add start terminal marker with route color
                 terminalPositions.start?.let { position ->
                     val routeParts = route.route.routeCode.split("-")
                     val startTerminalName = if (routeParts.size > 1) routeParts[0].trim() else "Start"
                     val marker = googleMap.addMarker(
                         MarkerOptions()
                             .position(position)
-                            .title("Start: $startTerminalName")
-                            .snippet("${route.route.routeCode} • Terminal for ${route.route.routeCode}")
-                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                            .title("$startTerminalName")
+                            .snippet("Terminal for ${route.route.routeCode}")
+                            .icon(BitmapDescriptorFactory.defaultMarker(getHueFromColor(routeColor)))
                     )
                     marker?.let { markers.add(it) }
                     Log.d("HomeFragment", "Added start terminal marker for ${route.route.routeCode} at: $position")
                 }
                 
-                // Add end terminal marker
+                // Add end terminal marker with route color
                 terminalPositions.end?.let { position ->
                     val routeParts = route.route.routeCode.split("-")
                     val endTerminalName = if (routeParts.size > 1) routeParts[1].trim() else "End"
                     val marker = googleMap.addMarker(
                         MarkerOptions()
                             .position(position)
-                            .title("End: $endTerminalName")
-                            .snippet("${route.route.routeCode} • Terminal for ${route.route.routeCode}")
-                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+                            .title("$endTerminalName")
+                            .snippet("Terminal for ${route.route.routeCode}")
+                            .icon(BitmapDescriptorFactory.defaultMarker(getHueFromColor(routeColor)))
                     )
                     marker?.let { markers.add(it) }
                     Log.d("HomeFragment", "Added end terminal marker for ${route.route.routeCode} at: $position")
                 }
                 
-                // Zoom to show both terminals and the route with adjusted padding for UI elements
-                if (markers.isNotEmpty()) {
+                // Zoom to show the entire route with terminals, ensuring majority of route is visible
+                val routeBounds = calculateRouteBounds(route)
+                if (routeBounds != null) {
+                    // Add padding to ensure the route is fully visible
+                    val padding = 100 // Padding in pixels
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(routeBounds, padding))
+                    Log.d("HomeFragment", "Zoomed to show entire route for ${route.route.routeCode} with padding: $padding")
+                } else if (markers.isNotEmpty()) {
+                    // Fallback: zoom to terminals if route bounds calculation fails
                     val builder = LatLngBounds.Builder()
                     markers.forEach { marker -> builder.include(marker.position) }
                     val bounds = builder.build()
                     
-                    // Use even more padding to ensure route visibility
                     val padding = 300 // Maximum padding to ensure route is fully visible
                     googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
                     Log.d("HomeFragment", "Zoomed to show terminals for ${route.route.routeCode} with maximum padding: $padding")
                 } else {
-                    Log.w("HomeFragment", "No markers to zoom to for ${route.route.routeCode}")
+                    Log.w("HomeFragment", "No markers or route bounds to zoom to for ${route.route.routeCode}")
                 }
             }
         }
@@ -477,17 +785,46 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     val startCoord = coordinates.getJSONArray(0)
                     val startLng = startCoord.getDouble(0)
                     val startLat = startCoord.getDouble(1)
+                    val startPosition = LatLng(startLat, startLng)
                     
                     // Last coordinate (end terminal)
                     val lastIndex = coordinates.length() - 1
                     val endCoord = coordinates.getJSONArray(lastIndex)
                     val endLng = endCoord.getDouble(0)
                     val endLat = endCoord.getDouble(1)
+                    val endPosition = LatLng(endLat, endLng)
                     
-                    return TerminalPositions(
-                        start = LatLng(startLat, startLng),
-                        end = LatLng(endLat, endLng)
-                    )
+                    // Burnham Park/Plaza coordinates (approximate center)
+                    val plazaCenter = LatLng(16.4125, 120.5975)
+                    
+                    // Calculate which terminal is closer to Plaza
+                    val startDistance = calculateDistance(startPosition, plazaCenter)
+                    val endDistance = calculateDistance(endPosition, plazaCenter)
+                    
+                    // If the route name contains "Plaza", ensure the Plaza terminal is identified correctly
+                    val routeName = route.route.routeCode
+                    if (routeName.contains("Plaza", ignoreCase = true)) {
+                        // For routes ending at Plaza, the Plaza terminal should be the end terminal
+                        if (endDistance < startDistance) {
+                            // End is closer to Plaza, so it's likely the Plaza terminal
+                            return TerminalPositions(
+                                start = startPosition,
+                                end = endPosition
+                            )
+                        } else {
+                            // Start is closer to Plaza, so swap positions
+                            return TerminalPositions(
+                                start = endPosition,
+                                end = startPosition
+                            )
+                        }
+                    } else {
+                        // For other routes, use the original order
+                        return TerminalPositions(
+                            start = startPosition,
+                            end = endPosition
+                        )
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -499,44 +836,94 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     
     data class TerminalPositions(val start: LatLng?, val end: LatLng?)
 
+    private fun calculateRouteBounds(route: RouteWithTerminals): LatLngBounds? {
+        return try {
+            route.route.routeGeoJson?.let { geoJson ->
+                val jsonObject = JSONObject(geoJson)
+                val features = jsonObject.getJSONArray("features")
+                
+                if (features.length() > 0) {
+                    val feature = features.getJSONObject(0)
+                    val geometry = feature.getJSONObject("geometry")
+                    
+                    if (geometry.getString("type") == "LineString") {
+                        val coordinates = geometry.getJSONArray("coordinates")
+                        val builder = LatLngBounds.Builder()
+                        
+                        // Include all route points in bounds
+                        for (i in 0 until coordinates.length()) {
+                            val coord = coordinates.getJSONArray(i)
+                            val lng = coord.getDouble(0)
+                            val lat = coord.getDouble(1)
+                            builder.include(LatLng(lat, lng))
+                        }
+                        
+                        // Include user location if available
+                        currentUserLocation?.let { userLocation ->
+                            builder.include(userLocation)
+                        }
+                        
+                        return builder.build()
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            Log.e("HomeFragment", "Error calculating route bounds for ${route.route.routeCode}", e)
+            null
+        }
+    }
+
     override fun onMarkerClick(marker: Marker): Boolean {
         marker.showInfoWindow()
         return false
     }
 
     private fun setupClickListeners() {
-        binding.fabCurrentLocation.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-                getCurrentLocation()
-            } else {
-                requestLocationPermission()
-            }
-        }
+//        binding.fabCurrentLocation.setOnClickListener {
+//            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+//                == PackageManager.PERMISSION_GRANTED) {
+//                getCurrentLocation()
+//            } else {
+//                requestLocationPermission()
+//            }
+//        }
 
         binding.fabAddRoute.setOnClickListener {
             showAddBaguioRouteDialog()
         }
         
         // Add debug button to reset database (for testing)
-        binding.fabCurrentLocation.setOnLongClickListener {
-            resetDatabaseForDebug()
-            true
-        }
+//        binding.fabCurrentLocation.setOnLongClickListener {
+//            resetDatabaseForDebug()
+//            true
+//        }
 
-        binding.buttonViewRoutes.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_terminals)
-        }
+//        binding.buttonViewRoutes.setOnClickListener {
+//            findNavController().navigate(R.id.action_home_to_terminals)
+//        }
         
         binding.buttonFavoriteRoute.setOnClickListener {
             currentDisplayedRoute?.let { route ->
                 toggleFavorite(route.route.id)
             }
         }
+        
+        // Favorites toggle button
+        binding.fabFavoritesToggle.setOnClickListener {
+            toggleFavoritesView()
+        }
+        
+        // Nearest routes toggle button
+        binding.fabNearestRoutes.setOnClickListener {
+            toggleNearestRoutesView()
+        }
     }
 
     private fun setupSearch() {
-        binding.editSearch.addTextChangedListener(object : TextWatcher {
+        val activity = requireActivity()
+        val searchEditText = activity.findViewById<android.widget.EditText>(R.id.editSearch)
+        searchEditText?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
@@ -559,9 +946,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         val routeDao = database.routeDao()
         
         if (query.isBlank()) {
-            // Reset to default view - show all routes
+            // Reset to default view - show all routes or favorites based on toggle
             withContext(Dispatchers.Main) {
-                // Clear everything and show all routes
+                // Clear everything and show appropriate routes
                 markers.forEach { it.remove() }
                 markers.clear()
                 routePolylines.forEach { it.remove() }
@@ -579,8 +966,19 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             routePolylines.clear()
         }
         
-        // Search Routes only (no terminals)
-        routeDao.searchRoutesWithTerminals(query).collect { routes ->
+        // Search Routes only (no terminals) - combine search with favorites filter if active
+        val searchFlow = if (isShowingFavorites) {
+            val currentUser = authRepository.currentUser.first()
+            if (currentUser != null) {
+                routeDao.searchFavoriteRoutesWithTerminals(currentUser.id, query)
+            } else {
+                routeDao.searchRoutesWithTerminals(query)
+            }
+        } else {
+            routeDao.searchRoutesWithTerminals(query)
+        }
+        
+        searchFlow.collect { routes ->
             withContext(Dispatchers.Main) {
                 // Clear existing polylines from previous search
                 routePolylines.forEach { it.remove() }
@@ -634,8 +1032,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 // Set up polyline click listener for search results
                 setupPolylineClickListener()
                 
-                // Zoom to first result if available
-                if (routes.isNotEmpty()) {
+                // Auto-select the route if only one result remains
+                if (routes.size == 1) {
+                    Log.d("HomeFragment", "Auto-selecting single search result: ${routes[0].route.routeCode}")
+                    selectRoute(routes[0], null)
+                } else if (routes.isNotEmpty()) {
+                    // Zoom to first result if multiple results
                     routes[0].route.routeGeoJson?.let { geoJson ->
                         try {
                             val jsonObject = JSONObject(geoJson)
@@ -667,19 +1069,463 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         binding.cardRouteInfo.visibility = View.VISIBLE
         
         binding.textRouteName.text = route.route.routeCode
-        binding.textRouteDestination.text = "${route.startTerminal.name} → ${route.endTerminal.name}"
-        binding.textRouteFare.text = "Fare: ₱${"%.2f".format(route.route.fare)}"
-        val estimatedTime = if (route.route.estimatedTravelTimeInSeconds != null) {
-            "${route.route.estimatedTravelTimeInSeconds / 60} mins"
+        binding.textRouteFare.text = "₱${"%.2f".format(route.route.fare)}"
+        
+        // Calculate and display route length with estimated time
+        val routeLength = calculateRouteLength(route)
+        val routeLengthText = if (routeLength < 1.0) {
+            "${"%.0f".format(routeLength * 1000)}m"
         } else {
-            "Unknown"
+            "${"%.1f".format(routeLength)}km"
         }
-        binding.textRouteTime.text = "Time: $estimatedTime"
+        
+        // Calculate estimated walking time (assuming 5 km/h walking speed)
+        val estimatedWalkingTimeMinutes = calculateWalkingTime(routeLength)
+        val routeLengthWithTime = "$routeLengthText / $estimatedWalkingTimeMinutes min"
+        binding.textRouteLength.text = routeLengthWithTime
+        
+        // Calculate and display distance to nearest terminal if user location is available
+        if (currentUserLocation != null) {
+            val (nearestTerminal, distance) = findNearestTerminal(route)
+            if (distance != null && nearestTerminal != null) {
+                val distanceText = if (distance < 1.0) {
+                    "${"%.0f".format(distance * 1000)}m"
+                } else {
+                    "${"%.1f".format(distance)}km"
+                }
+                binding.textDistanceToTerminal.text = "Walk $distanceText to ${nearestTerminal.name}"
+                binding.layoutDistanceToTerminal.visibility = View.VISIBLE
+                
+                // Draw walking path
+                val terminalLocation = LatLng(nearestTerminal.latitude, nearestTerminal.longitude)
+                drawWalkingPath(currentUserLocation!!, terminalLocation)
+            } else {
+                binding.layoutDistanceToTerminal.visibility = View.GONE
+                clearWalkingPath()
+            }
+        } else {
+            binding.layoutDistanceToTerminal.visibility = View.GONE
+            clearWalkingPath()
+        }
         
         Log.d("HomeFragment", "Route info displayed: ${route.route.routeCode}, ${route.startTerminal.name} → ${route.endTerminal.name}")
         
         // Update favorite button state
         updateFavoriteButtonState(route.route.id)
+    }
+    
+    private fun calculateRouteLength(route: RouteWithTerminals): Double {
+        return try {
+            route.route.routeGeoJson?.let { geoJson ->
+                val jsonObject = JSONObject(geoJson)
+                val features = jsonObject.getJSONArray("features")
+                
+                if (features.length() > 0) {
+                    val feature = features.getJSONObject(0)
+                    val geometry = feature.getJSONObject("geometry")
+                    
+                    if (geometry.getString("type") == "LineString") {
+                        val coordinates = geometry.getJSONArray("coordinates")
+                        var totalLength = 0.0
+                        
+                        // Calculate total length of the route by summing distances between consecutive points
+                        for (i in 0 until coordinates.length() - 1) {
+                            val coord1 = coordinates.getJSONArray(i)
+                            val coord2 = coordinates.getJSONArray(i + 1)
+                            val lng1 = coord1.getDouble(0)
+                            val lat1 = coord1.getDouble(1)
+                            val lng2 = coord2.getDouble(0)
+                            val lat2 = coord2.getDouble(1)
+                            
+                            val point1 = LatLng(lat1, lng1)
+                            val point2 = LatLng(lat2, lng2)
+                            
+                            totalLength += calculateDistance(point1, point2)
+                        }
+                        
+                        return totalLength
+                    }
+                }
+            }
+            0.0
+        } catch (e: Exception) {
+            Log.e("HomeFragment", "Error calculating route length for ${route.route.routeCode}", e)
+            0.0
+        }
+    }
+    
+    private fun calculateWalkingTime(distanceKm: Double): Int {
+        // Assuming average walking speed of 5 km/h
+        val walkingSpeedKmPerHour = 5.0
+        val timeHours = distanceKm / walkingSpeedKmPerHour
+        val timeMinutes = (timeHours * 60).toInt()
+        
+        // Ensure minimum of 1 minute for very short distances
+        return maxOf(1, timeMinutes)
+    }
+    
+    private fun findNearestTerminal(route: RouteWithTerminals): Pair<Terminal?, Double?> {
+        return try {
+            val terminalPositions = extractTerminalPositionsFromRoute(route)
+            var nearestTerminal: Terminal? = null
+            var minDistance = Double.MAX_VALUE
+            
+            // Check start terminal
+            terminalPositions.start?.let { startPosition ->
+                val distance = calculateDistance(currentUserLocation!!, startPosition)
+                if (distance < minDistance) {
+                    minDistance = distance
+                    nearestTerminal = Terminal(
+                        id = route.startTerminal.id,
+                        name = route.startTerminal.name,
+                        description = route.startTerminal.description,
+                        latitude = startPosition.latitude,
+                        longitude = startPosition.longitude,
+                        createdAt = route.startTerminal.createdAt,
+                        updatedAt = route.startTerminal.updatedAt
+                    )
+                }
+            }
+            
+            // Check end terminal
+            terminalPositions.end?.let { endPosition ->
+                val distance = calculateDistance(currentUserLocation!!, endPosition)
+                if (distance < minDistance) {
+                    minDistance = distance
+                    nearestTerminal = Terminal(
+                        id = route.endTerminal.id,
+                        name = route.endTerminal.name,
+                        description = route.endTerminal.description,
+                        latitude = endPosition.latitude,
+                        longitude = endPosition.longitude,
+                        createdAt = route.endTerminal.createdAt,
+                        updatedAt = route.endTerminal.updatedAt
+                    )
+                }
+            }
+            
+            if (nearestTerminal != null && minDistance != Double.MAX_VALUE) {
+                Pair(nearestTerminal, minDistance)
+            } else {
+                Pair(null, null)
+            }
+        } catch (e: Exception) {
+            Log.e("HomeFragment", "Error finding nearest terminal for route ${route.route.routeCode}", e)
+            Pair(null, null)
+        }
+    }
+    
+    private fun drawWalkingPath(userLocation: LatLng, terminalLocation: LatLng) {
+        clearWalkingPath()
+        
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // Get walking route from Google Routes API
+                val walkingRoute = getWalkingRoute(userLocation, terminalLocation)
+                withContext(Dispatchers.Main) {
+                    if (walkingRoute != null) {
+                        // Always use dashed pattern for walking routes to distinguish them from jeepney routes
+                        val pattern = listOf<PatternItem>(
+                            Dash(20f),
+                            Gap(10f)
+                        )
+                        
+                        walkingPathPolyline = googleMap.addPolyline(
+                            PolylineOptions()
+                                .addAll(walkingRoute)
+                                .color(Color.BLUE)
+                                .width(8f)
+                                .pattern(pattern)
+                                .zIndex(10f) // Higher z-index to appear above other routes
+                        )
+                        
+                        Log.d("HomeFragment", "Walking path drawn with ${walkingRoute.size} points")
+                    } else {
+                        Log.w("HomeFragment", "No walking route available")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("HomeFragment", "Error drawing walking path", e)
+                // Final fallback to straight dashed line
+                withContext(Dispatchers.Main) {
+                    val pattern = listOf<PatternItem>(
+                        Dash(20f),
+                        Gap(10f)
+                    )
+                    
+                    walkingPathPolyline = googleMap.addPolyline(
+                        PolylineOptions()
+                            .add(userLocation, terminalLocation)
+                            .color(Color.BLUE)
+                            .width(8f)
+                            .pattern(pattern)
+                            .zIndex(10f)
+                    )
+                    
+                    Log.d("HomeFragment", "Error fallback: Straight walking path drawn")
+                }
+            }
+        }
+    }
+    
+    private fun getRoutesApiWalkingPolyline(origin: LatLng, destination: LatLng): List<LatLng>? {
+        return try {
+            val url = "https://routes.googleapis.com/directions/v2:computeRoutes"
+
+            val jsonBody = """
+{
+  "origin": {
+    "location": {"latLng": {"latitude": ${origin.latitude}, "longitude": ${origin.longitude}}}
+  },
+  "destination": {
+    "location": {"latLng": {"latitude": ${destination.latitude}, "longitude": ${destination.longitude}}}
+  },
+  "travelMode": "WALK",
+  "polylineQuality": "HIGH_QUALITY",
+  "polylineEncoding": "ENCODED_POLYLINE"
+}
+""".trimIndent()
+
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("X-Goog-Api-Key", "AIzaSyDHJBpnq-46VcsC0vBdvzUbu4ZcN8nrnEY")
+                .addHeader("X-Goog-FieldMask", "routes.polyline")
+                .post(jsonBody.toRequestBody("application/json".toMediaType()))
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            val body = response.body?.string() ?: return null
+
+            val json = JSONObject(body)
+            val routes = json.getJSONArray("routes")
+            if (routes.length() == 0) return null
+
+            val polylineObj = routes.getJSONObject(0).getJSONObject("polyline")
+            val encoded = polylineObj.getString("encodedPolyline")
+
+            decodePolyline(encoded)
+        } catch (e: Exception) {
+            Log.e("HomeFragment", "Routes API walking error", e)
+            null
+        }
+    }
+
+    private suspend fun getWalkingRoute(origin: LatLng, destination: LatLng): List<LatLng>? {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Try to get actual walking route from Google Routes API
+                val routesApi = getRoutesApiWalkingPolyline(origin, destination)
+                if (!routesApi.isNullOrEmpty()) {
+                    Log.d("HomeFragment", "Using Routes API walking route with ${routesApi.size} points")
+                    return@withContext routesApi
+                }
+
+                val walkingRoute = getDirectionsWalkingRoute(origin, destination)
+                if (!walkingRoute.isNullOrEmpty()) {
+                    Log.d("HomeFragment", "Using Directions API walking route with ${walkingRoute.size} points")
+                    return@withContext walkingRoute
+                }
+
+                // Directions API failed completely — use simulated fallback
+                Log.w("HomeFragment", "Directions API returned no usable route, using simulated walking route")
+                createSimulatedWalkingRoute(origin, destination)
+            } catch (e: Exception) {
+                Log.e("HomeFragment", "Error getting walking route", e)
+                // Final fallback to simulated route
+                createSimulatedWalkingRoute(origin, destination)
+            }
+        }
+    }
+
+    private fun getDirectionsWalkingRoute(origin: LatLng, destination: LatLng): List<LatLng>? {
+        return try {
+            Log.d("HomeFragment", "Calling Directions API for walking route from $origin to $destination")
+
+            // Use classic Google Directions API which is more widely supported
+            val originStr = "${origin.latitude},${origin.longitude}"
+            val destinationStr = "${destination.latitude},${destination.longitude}"
+            val url = "https://maps.googleapis.com/maps/api/directions/json?origin=$originStr&destination=$destinationStr&mode=walking&key=AIzaSyDHJBpnq-46VcsC0vBdvzUbu4ZcN8nrnEY"
+
+            Log.d("HomeFragment", "Directions API URL: $url")
+
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            val responseBody = response.body?.string()
+
+            Log.d("HomeFragment", "Directions API response code: ${response.code}")
+
+            if (response.isSuccessful && responseBody != null) {
+                Log.d("HomeFragment", "Directions API response received")
+                val jsonResponse = JSONObject(responseBody)
+
+                if (jsonResponse.getString("status") == "OK") {
+                    val routes = jsonResponse.getJSONArray("routes")
+                    Log.d("HomeFragment", "Directions API returned ${routes.length()} routes")
+
+                    if (routes.length() > 0) {
+                        val route = routes.getJSONObject(0)
+                        // Insert support for Google's overview polyline
+                        if (route.has("overview_polyline")) {
+                            val overview = route.getJSONObject("overview_polyline").getString("points")
+                            val decodedOverview = decodePolyline(overview)
+                            if (decodedOverview.isNotEmpty()) {
+                                Log.d("HomeFragment", "Using overview polyline with ${decodedOverview.size} points")
+                                return decodedOverview
+                            }
+                        }
+                        val legs = route.getJSONArray("legs")
+
+                        if (legs.length() > 0) {
+                            val leg = legs.getJSONObject(0)
+                            val steps = leg.getJSONArray("steps")
+                            val path = mutableListOf<LatLng>()
+
+                            Log.d("HomeFragment", "Processing ${steps.length()} steps")
+
+                            for (i in 0 until steps.length()) {
+                                val step = steps.getJSONObject(i)
+                                val polyline = step.getJSONObject("polyline")
+                                val points = polyline.getString("points")
+
+                                // Decode polyline points for each step
+                                val decodedPoints = decodePolyline(points)
+                                path.addAll(decodedPoints)
+                            }
+
+                            Log.d("HomeFragment", "Successfully decoded walking route with ${path.size} points")
+                            return path
+                        } else {
+                            Log.w("HomeFragment", "No legs in route")
+                        }
+                    } else {
+                        Log.w("HomeFragment", "No routes returned from API")
+                    }
+                } else {
+                    Log.w("HomeFragment", "Directions API status: ${jsonResponse.getString("status")}")
+                }
+            } else {
+                Log.e("HomeFragment", "Directions API failed: ${response.code} - ${response.message}")
+                if (responseBody != null) {
+                    Log.e("HomeFragment", "Error response body: $responseBody")
+                }
+            }
+            null
+        } catch (e: Exception) {
+            Log.e("HomeFragment", "Error calling Directions API", e)
+            null
+        }
+    }
+    
+    private fun createEnhancedWalkingRoute(origin: LatLng, destination: LatLng): List<LatLng> {
+        val routePoints = mutableListOf<LatLng>()
+        
+        // Add origin point
+        routePoints.add(origin)
+        
+        // Calculate distance to determine complexity of the route
+        val distance = calculateDistance(origin, destination)
+        val steps = maxOf(5, minOf(20, (distance * 100).toInt())) // More points for longer distances
+        
+        // Create a more realistic walking path with multiple curves
+        for (i in 1 until steps) {
+            val fraction = i.toDouble() / steps.toDouble()
+            
+            // Calculate base point along straight line
+            val baseLat = origin.latitude + (destination.latitude - origin.latitude) * fraction
+            val baseLng = origin.longitude + (destination.longitude - origin.longitude) * fraction
+            
+            // Add realistic curvature that simulates following roads
+            val curveFactor = 0.0005 * sin(fraction * Math.PI * 2) // Multiple curves
+            val curveOffsetLat = sin(fraction * Math.PI * 3) * curveFactor
+            val curveOffsetLng = cos(fraction * Math.PI * 2) * curveFactor
+            
+            val curvedLat = baseLat + curveOffsetLat
+            val curvedLng = baseLng + curveOffsetLng
+            
+            routePoints.add(LatLng(curvedLat, curvedLng))
+        }
+        
+        // Add destination point
+        routePoints.add(destination)
+        
+        return routePoints
+    }
+    
+    private fun decodePolyline(encoded: String): List<LatLng> {
+        val poly = mutableListOf<LatLng>()
+        var index = 0
+        val len = encoded.length
+        var lat = 0
+        var lng = 0
+        
+        while (index < len) {
+            var b: Int
+            var shift = 0
+            var result = 0
+            do {
+                b = encoded[index++].code - 63
+                result = result or (b and 0x1f shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlat = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+            lat += dlat
+            
+            shift = 0
+            result = 0
+            do {
+                b = encoded[index++].code - 63
+                result = result or (b and 0x1f shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlng = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+            lng += dlng
+            
+            val point = LatLng(lat / 1E5, lng / 1E5)
+            poly.add(point)
+        }
+        
+        return poly
+    }
+    
+    private fun createSimulatedWalkingRoute(origin: LatLng, destination: LatLng): List<LatLng> {
+        val routePoints = mutableListOf<LatLng>()
+        
+        // Add origin point
+        routePoints.add(origin)
+        
+        // Calculate intermediate points to create a more natural walking path
+        val steps = 10 // Number of intermediate points
+        for (i in 1 until steps) {
+            val fraction = i.toDouble() / steps.toDouble()
+            
+            // Calculate base point along straight line
+            val baseLat = origin.latitude + (destination.latitude - origin.latitude) * fraction
+            val baseLng = origin.longitude + (destination.longitude - origin.longitude) * fraction
+            
+            // Add slight curvature to simulate walking paths
+            val curveFactor = 0.0002 // Small curvature
+            val curveOffset = sin(fraction * Math.PI) * curveFactor
+            
+            val curvedLat = baseLat + curveOffset
+            val curvedLng = baseLng + curveOffset
+            
+            routePoints.add(LatLng(curvedLat, curvedLng))
+        }
+        
+        // Add destination point
+        routePoints.add(destination)
+        
+        return routePoints
+    }
+    
+    private fun clearWalkingPath() {
+        walkingPathPolyline?.remove()
+        walkingPathPolyline = null
     }
     
     private fun updateFavoriteButtonState(routeId: Long) {
@@ -825,16 +1671,117 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
                 location?.let {
                     val currentLatLng = LatLng(it.latitude, it.longitude)
+                    currentUserLocation = currentLatLng
                     
                     // Check if user is in Baguio area (within ~50km)
                     val distance = calculateDistance(currentLatLng, baguioCenter)
                     if (distance < 50.0) { // Within 50km of Baguio
                         googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
+                        
+                        // Calculate nearest routes
+                        calculateNearestRoutes()
                     } else {
                         // User is far from Baguio, show Baguio center
                         googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(baguioCenter, 13f))
                         showBaguioWelcomeMessage()
                     }
+                }
+            }
+        }
+    }
+    
+    private fun calculateNearestRoutes() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val database = DyipQrDatabase.getInstance(requireContext())
+            val routeDao = database.routeDao()
+            
+            routeDao.observeAllRoutesWithTerminals().collect { routes ->
+                nearestRoutes.clear()
+                
+                routes.forEach { route ->
+                    route.route.routeGeoJson?.let { geoJson ->
+                        try {
+                            val jsonObject = JSONObject(geoJson)
+                            val features = jsonObject.getJSONArray("features")
+                            
+                            if (features.length() > 0) {
+                                val feature = features.getJSONObject(0)
+                                val geometry = feature.getJSONObject("geometry")
+                                
+                                if (geometry.getString("type") == "LineString") {
+                                    val coordinates = geometry.getJSONArray("coordinates")
+                                    var minDistance = Double.MAX_VALUE
+                                    
+                                    // Calculate minimum distance from user to any point on the route
+                                    for (i in 0 until coordinates.length()) {
+                                        val coord = coordinates.getJSONArray(i)
+                                        val lng = coord.getDouble(0)
+                                        val lat = coord.getDouble(1)
+                                        val routePoint = LatLng(lat, lng)
+                                        
+                                        val distance = calculateDistance(currentUserLocation!!, routePoint)
+                                        if (distance < minDistance) {
+                                            minDistance = distance
+                                        }
+                                    }
+                                    
+                                    nearestRoutes.add(RouteWithDistance(route, minDistance))
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("HomeFragment", "Error calculating distance for route ${route.route.routeCode}", e)
+                        }
+                    }
+                }
+                
+                // Sort by distance (nearest first)
+                nearestRoutes.sortBy { it.distance }
+                
+                // Update UI with nearest routes info
+                updateNearestRoutesDisplay()
+            }
+        }
+    }
+    
+    private fun updateNearestRoutesDisplay() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
+                if (nearestRoutes.isNotEmpty() && isShowingNearestRoutes) {
+                    Log.d("HomeFragment", "Found ${nearestRoutes.size} routes, nearest: ${nearestRoutes[0].route.route.routeCode} (${"%.2f".format(nearestRoutes[0].distance)} km)")
+                    
+                    // Show nearest routes panel only when toggle is active
+                    binding.cardNearestRoutes.visibility = View.VISIBLE
+                    
+                    // Build display text for nearest routes
+                    val nearestRoutesText = buildString {
+                        append("Routes near you:\n")
+                        nearestRoutes.take(3).forEachIndexed { index, routeWithDistance ->
+                            val distanceText = if (routeWithDistance.distance < 1.0) {
+                                "${"%.0f".format(routeWithDistance.distance * 1000)}m"
+                            } else {
+                                "${"%.1f".format(routeWithDistance.distance)}km"
+                            }
+                            append("${index + 1}. ${routeWithDistance.route.route.routeCode} ($distanceText)\n")
+                        }
+                    }
+                    
+                    binding.textNearestRoutes.text = nearestRoutesText
+                    
+                    // Show toast for the nearest route if very close
+                    if (nearestRoutes[0].distance < 0.5) { // Within 500m
+                        Toast.makeText(
+                            requireContext(),
+                            "🚌 Nearest route: ${nearestRoutes[0].route.route.routeCode} (${"%.0f".format(nearestRoutes[0].distance * 1000)}m away)",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                } else if (nearestRoutes.isEmpty() && isShowingNearestRoutes) {
+                    // Show "Finding routes..." message when toggle is active but no routes calculated yet
+                    binding.cardNearestRoutes.visibility = View.VISIBLE
+                    binding.textNearestRoutes.text = "Finding routes near you..."
+                } else {
+                    // Hide panel if toggle is inactive
+                    binding.cardNearestRoutes.visibility = View.GONE
                 }
             }
         }

@@ -3,8 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:padding="16dp">
+    android:fillViewport="true" >
+<!--    android:padding="16dp">-->
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -19,22 +19,21 @@
             android:orientation="vertical"
             android:gravity="center_horizontal" >
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Scan QR"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="16dp" />
+<!--            <TextView-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:text="Scan QR"-->
+<!--                android:textColor="?attr/colorOnSurface"-->
+<!--                android:textSize="28sp"-->
+<!--                android:textStyle="bold"-->
+<!--                android:layout_marginBottom="16dp" />-->
 
             <!-- Camera Preview for QR Scanning -->
             <com.google.android.material.card.MaterialCardView
+                android:layout_margin="10dp"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="8dp"
-                android:layout_marginBottom="8dp">
+                android:layout_height="match_parent" >
+<!--                android:layout_marginBottom="8dp">-->
 
                 <!-- Camera Preview -->
                 <androidx.camera.view.PreviewView

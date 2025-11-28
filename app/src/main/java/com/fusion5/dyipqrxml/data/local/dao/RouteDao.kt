@@ -23,6 +23,26 @@ interface RouteDao {
     @Query("SELECT * FROM Routes WHERE route_code LIKE '%' || :query || '%' ORDER BY route_code")
     fun searchRoutesWithTerminals(query: String): Flow<List<RouteWithTerminals>>
 
+    @Transaction
+    @Query("""
+        SELECT DISTINCT r.*
+        FROM Routes r
+        INNER JOIN Favorites f ON r.id = f.route_id
+        WHERE f.user_id = :userId
+        ORDER BY r.route_code
+    """)
+    fun observeFavoriteRoutesWithTerminals(userId: Long): Flow<List<RouteWithTerminals>>
+
+    @Transaction
+    @Query("""
+        SELECT DISTINCT r.*
+        FROM Routes r
+        INNER JOIN Favorites f ON r.id = f.route_id
+        WHERE f.user_id = :userId AND r.route_code LIKE '%' || :query || '%'
+        ORDER BY r.route_code
+    """)
+    fun searchFavoriteRoutesWithTerminals(userId: Long, query: String): Flow<List<RouteWithTerminals>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRoute(route: RouteEntity): Long
 

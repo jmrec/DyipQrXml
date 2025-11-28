@@ -39,29 +39,38 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
 
-        // Listen for navigation changes to update toolbar title
+        // Listen for navigation changes to update toolbar title and search visibility
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
                 R.id.homeFragment -> {
                     supportActionBar?.title = "Dyip QR"
+                    // Show search bar for map
+                    binding.searchCard.visibility = android.view.View.VISIBLE
                 }
                 R.id.loginFragment -> {
                     supportActionBar?.title = "Login"
+                    // Hide search bar for other fragments
+                    binding.searchCard.visibility = android.view.View.GONE
                 }
                 R.id.signupFragment -> {
                     supportActionBar?.title = "Register"
+                    binding.searchCard.visibility = android.view.View.GONE
                 }
                 R.id.userProfileFragment -> {
                     supportActionBar?.title = "Profile"
+                    binding.searchCard.visibility = android.view.View.GONE
                 }
                 R.id.quickScanFragment -> {
                     supportActionBar?.title = "Quick Scan"
+                    binding.searchCard.visibility = android.view.View.GONE
                 }
                 R.id.terminalsFragment -> {
                     supportActionBar?.title = "Terminals"
+                    binding.searchCard.visibility = android.view.View.GONE
                 }
                 R.id.savedFragment -> {
                     supportActionBar?.title = "Saved"
+                    binding.searchCard.visibility = android.view.View.GONE
                 }
             }
         }

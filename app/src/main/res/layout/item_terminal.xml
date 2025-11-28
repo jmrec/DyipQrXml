@@ -36,24 +36,34 @@
                 android:layout_marginBottom="4dp" />
 
             <!-- Route Description (Start → End) -->
-            <TextView
-                android:id="@+id/textTerminalDescription"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Start → End Terminal"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="14sp"
-                android:layout_marginBottom="8dp" />
+<!--            <TextView-->
+<!--                android:id="@+id/textTerminalDescription"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:text="Start → End Terminal"-->
+<!--                android:textColor="?attr/colorOnSurfaceVariant"-->
+<!--                android:textSize="14sp"-->
+<!--                android:layout_marginBottom="8dp" />-->
 
             <!-- Route Info (Fare and Travel Time) -->
             <TextView
                 android:id="@+id/textLocationInfo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Fare: ₱0.00 • 0 min"
+                android:text="₱0.00 • 0 min"
                 android:textColor="?attr/colorPrimary"
                 android:textSize="12sp"
                 android:drawablePadding="4dp" />
+                
+            <!-- Route Length and Distance to User -->
+            <TextView
+                android:id="@+id/textRouteDetails"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="900m / 20 min"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp" />
         </LinearLayout>
 
         <!-- Favorite Toggle Button -->
