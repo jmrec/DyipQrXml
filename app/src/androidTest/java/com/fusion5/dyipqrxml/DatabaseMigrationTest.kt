@@ -43,7 +43,6 @@ class DatabaseMigrationTest {
     fun testDatabaseSchemaAndRelationships() = runBlocking {
         val currentTime = getCurrentTimestamp()
 
-        // Test 1: Create and retrieve a user
         val user = UserEntity(
             firstName = "Test",
             lastName = "User",

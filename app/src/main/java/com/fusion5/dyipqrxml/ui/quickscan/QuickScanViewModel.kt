@@ -32,7 +32,6 @@ class QuickScanViewModel(
     private val _uiState = MutableStateFlow(QuickScanUiState())
     val uiState: StateFlow<QuickScanUiState> = _uiState.asStateFlow()
 
-    // Debounce state to prevent processing the same scan result repeatedly within a short time window.
     private var lastScanContent: String? = null
     private var lastScanTimestamp: Long = 0L
     private val scanDebounceWindowMillis: Long = 1500L
@@ -58,8 +57,9 @@ class QuickScanViewModel(
         if (normalized.isEmpty()) return
 
         val now = System.currentTimeMillis()
+
+	    // debouncing
         if (normalized == lastScanContent && (now - lastScanTimestamp) < scanDebounceWindowMillis) {
-            // Ignore duplicate scan results within the debounce window.
             return
         }
 
@@ -96,20 +96,16 @@ class QuickScanViewModel(
 
     private suspend fun processScanResult(result: String) {
         try {
-            // Validate if the result is a terminal ID
             val terminalId = result.toLongOrNull()
             val terminal = if (terminalId != null) {
                 terminalRepository.getById(terminalId)
             } else {
-				null
-	        }
+    null
+         }
             
-            // Get current user ID from session
             val currentUserId = sessionRepository.sessionUserId.first()
             
             if (terminal != null) {
-                // Valid terminal ID found
-                // Save to scan history
                 scanHistoryRepository.saveScan("Terminal: ${terminal.name} (ID: $result)", currentUserId)
                 
                 _uiState.update {
@@ -124,23 +120,21 @@ class QuickScanViewModel(
                     )
                 }
             } else {
-                // Not a valid terminal ID, treat as generic scan
-                scanHistoryRepository.saveScan(result, currentUserId)
+                scanHistoryRepository.saveScan("Invalid QR: $result", currentUserId)
                 
                 _uiState.update {
                     it.copy(
                         isScanning = false,
                         scanResult = result,
                         validatedTerminalName = null,
-                        successMessage = "QR code scanned successfully!",
-                        errorMessage = null,
+                        successMessage = null,
+                        errorMessage = "Invalid QR code",
                         isLoading = false,
                         scannedTerminalId = null
                     )
                 }
             }
         } catch (e: Exception) {
-            // Handle any errors during processing
             val currentUserId = sessionRepository.sessionUserId.first()
             scanHistoryRepository.saveScan("Error: $result", currentUserId)
             

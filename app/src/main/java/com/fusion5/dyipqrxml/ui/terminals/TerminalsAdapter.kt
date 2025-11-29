@@ -37,18 +37,14 @@ class TerminalsAdapter(
         fun bind(routeWithFavorite: com.fusion5.dyipqrxml.ui.terminals.RouteWithFavorite) {
             val route = routeWithFavorite.route
             
-            // Set route information
             binding.textTerminalName.text = route.routeCode
             
-            // Show fare and travel time
             val fareInfo = "₱${"%.2f".format(route.fare)}"
             
-            // Use the database travel time if available, otherwise calculate from route length
             val timeInfo = if (route.estimatedTravelTimeInSeconds != null) {
                 val minutes = route.estimatedTravelTimeInSeconds / 60
-                " • ${minutes} min"
+                " • $minutes min"
             } else {
-                // Calculate time from route length
                 val routeLength = calculateRouteLength(route)
                 val estimatedTime = calculateWalkingTime(routeLength)
                 " • ${estimatedTime} min"
@@ -57,7 +53,6 @@ class TerminalsAdapter(
             binding.textLocationInfo.text = "$fareInfo$timeInfo"
             binding.textLocationInfo.visibility = View.VISIBLE
             
-            // Show route length and time in same format as HomeFragment
             val routeLength = calculateRouteLength(route)
             val routeLengthText = if (routeLength < 1.0) {
                 "${"%.0f".format(routeLength * 1000)}m"
@@ -69,7 +64,6 @@ class TerminalsAdapter(
             binding.textRouteDetails.text = "$routeLengthText / $estimatedTime min"
             binding.textRouteDetails.visibility = View.VISIBLE
 
-            // Update favorite button
             binding.buttonFavorite.visibility = View.VISIBLE
             if (routeWithFavorite.isFavorite) {
                 binding.buttonFavorite.setImageResource(R.drawable.ic_bookmark_added)
@@ -79,7 +73,6 @@ class TerminalsAdapter(
                 binding.buttonFavorite.contentDescription = itemView.context.getString(R.string.favorite_add_desc)
             }
 
-            // Set click listeners
             binding.root.setOnClickListener {
                 onRouteClick(routeWithFavorite)
             }

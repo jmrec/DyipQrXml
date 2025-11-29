@@ -86,30 +86,23 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private var currentDisplayedRoute: RouteWithTerminals? = null
     private var selectedRouteLayer: GeoJsonLayer? = null
     
-    // Favorites toggle state
     private var isShowingFavorites = false
     
-    // Current location
     private var currentUserLocation: LatLng? = null
     private var currentLocationMarker: Marker? = null
     
-    // Nearest routes tracking
     private val nearestRoutes = mutableListOf<RouteWithDistance>()
     private var isShowingNearestRoutes = false
     data class RouteWithDistance(val route: RouteWithTerminals, val distance: Double)
     
-    // Walking path polyline
     private var walkingPathPolyline: Polyline? = null
     
-    // Route color cache for consistent coloring
     private val routeColorCache = mutableMapOf<String, Int>()
     
-    // HTTP client for Directions API
     private val httpClient = OkHttpClient()
     
-    // Toast debouncing
     private var lastToastTime = 0L
-    private val toastDebounceDelay = 1000L // 1 second
+    private val toastDebounceDelay = 1000L
     
     private fun showDebouncedToast(message: String) {
         val currentTime = System.currentTimeMillis()
@@ -119,7 +112,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
-    // Baguio center coordinates
     private val baguioCenter = LatLng(16.4023, 120.5960)
 
     override fun onCreateView(
@@ -135,11 +127,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
         
-        // Initialize map
+        // Init map
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
         
-        // Initialize repositories
+        // Init repositories
         authRepository = ServiceLocator.provideAuthRepository(requireContext())
         favoriteRepository = ServiceLocator.provideFavoriteRepository(requireContext())
         routeRepository = ServiceLocator.provideRouteRepository(requireContext())
@@ -148,7 +140,15 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         setupSearch()
         checkLocationPermission()
         
-        // Hide welcome banner after 5 seconds
+        // Check if we have a scanned terminal ID from QR scanning
+        val scannedTerminalId = arguments?.getLong("scannedTerminalId", -1L) ?: -1L
+        if (scannedTerminalId != -1L) {
+            // Auto-select routes for this terminal
+            viewLifecycleOwner.lifecycleScope.launch {
+                autoSelectRoutesForTerminal(scannedTerminalId)
+            }
+        }
+        
 //        view.postDelayed({
 //            if (isAdded && _binding != null) {
 //                binding.cardWelcome.visibility = View.GONE
@@ -160,19 +160,18 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         Log.d("HomeFragment", "GoogleMap is ready")
         googleMap = map
         
-        // Enable basic map features
-        googleMap.uiSettings.isZoomControlsEnabled = false // Hide zoom controls
+        // basic map features
+        googleMap.uiSettings.isZoomControlsEnabled = false
         googleMap.uiSettings.isCompassEnabled = true
-        googleMap.uiSettings.isMyLocationButtonEnabled = true // Enable built-in location button
+        googleMap.uiSettings.isMyLocationButtonEnabled = true
         googleMap.setOnMarkerClickListener(this)
         
-        // Enable the blue dot for current location (requires location permission)
+        // Enable the blue dot for current location
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
             == PackageManager.PERMISSION_GRANTED) {
             googleMap.isMyLocationEnabled = true
         }
         
-        // Add map click listener to clear selection
         googleMap.setOnMapClickListener {
             clearRouteSelection()
         }
@@ -185,31 +184,26 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             } else {
                 requestLocationPermission()
             }
-            true // Return true to indicate we handled the click
+            true // Return true to indicate that the click was handled
         }
         
-        // Add map style for better visibility
         try {
-            // You can customize the map style here if needed
-            googleMap.setMapStyle(null) // Using default style for now
+            googleMap.setMapStyle(null) // Use default style
         } catch (e: Exception) {
             Log.e("HomeFragment", "Error setting map style", e)
         }
         
-        // Move camera to Baguio center
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(baguioCenter, 13f))
         Log.d("HomeFragment", "Camera moved to Baguio center")
         
-        // Display Routes from DB (terminals will be hidden by default)
         displayRoutesFromDb()
         
-        // Get current location if permission granted
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
             == PackageManager.PERMISSION_GRANTED) {
             getCurrentLocation()
         }
         
-        // Check if map is actually loaded
+        // Check if map is loaded
         googleMap.setOnMapLoadedCallback {
             Log.d("HomeFragment", "Map tiles loaded successfully")
         }
@@ -223,12 +217,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         displayTerminalsJob = viewLifecycleOwner.lifecycleScope.launch {
             terminalRepository.observeAll().collect { terminals ->
                 Log.d("HomeFragment", "Loaded ${terminals.size} terminals (hidden by default)")
-                // Clear existing markers but don't display new ones by default
+
+                // Clear existing markers and don't display new ones by default
                 markers.forEach { it.remove() }
                 markers.clear()
-                
-                // Store terminals for later use when routes are clicked
-                // We'll create markers only when showTerminalsForRoute is called
             }
         }
     }
@@ -304,11 +296,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     // Show nearest routes panel
                     binding.cardNearestRoutes.visibility = View.VISIBLE
                     
-                    // If we already have location data, recalculate nearest routes
+                    // If we have location data, then recalculate nearest routes
                     if (currentUserLocation != null) {
                         calculateNearestRoutes()
                     } else {
-                        // Show "Finding routes..." message
                         binding.textNearestRoutes.text = "Finding routes near you..."
                     }
                     
@@ -318,7 +309,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     binding.fabNearestRoutes.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.secondary)
                     showDebouncedToast("Showing all routes")
                     
-                    // Hide nearest routes panel
                     binding.cardNearestRoutes.visibility = View.GONE
                     
                     // Show all routes
@@ -337,8 +327,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 routePolylines.forEach { it.remove() }
                 routePolylines.clear()
                 
-                // Show only nearest routes (top 5)
-                val routesToShow = nearestRoutes.take(5).map { it.route }
+                val routesToShow = nearestRoutes.take(2).map { it.route }
                 
                 // Create polylines for nearest routes
                 routesToShow.forEach { route ->
@@ -466,7 +455,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 routeLabelMarkers.forEach { it.remove() }
                 routeLabelMarkers.clear()
 
-                // Use Polyline approach for guaranteed clickability
                 routes.forEachIndexed { index, route ->
                     route.route.routeGeoJson?.let { geoJson ->
                         try {
@@ -491,21 +479,18 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                                         latLngList.add(LatLng(lat, lng))
                                     }
                                     
-                                    // Create polyline with click listener
                                     val polyline = googleMap.addPolyline(
                                         PolylineOptions()
                                             .addAll(latLngList)
                                             .color(getColorForRoute(route.route.routeCode))
                                             .width(12f)
-                                            .clickable(true) // THIS IS KEY - make it clickable
+                                            .clickable(true)
                                     )
                                     
                                     // Store route reference in polyline tag
                                     polyline.tag = route
                                     routePolylines.add(polyline)
-                                    
-                                    // Route labels removed as requested
-                                    
+
                                     Log.d("HomeFragment", "Successfully created polyline for route: ${route.route.routeCode}")
                                     Log.d("HomeFragment", "Polyline points: ${latLngList.size}")
                                 }
@@ -520,7 +505,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     }
                 }
                 
-                // Set up polyline click listener
                 setupPolylineClickListener()
                 
                 // Auto-select the route if only one result remains after filtering
@@ -528,16 +512,16 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     Log.d("HomeFragment", "=== AUTO-SELECTION TRIGGERED ===")
                     Log.d("HomeFragment", "Auto-selecting single filtered route: ${routes[0].route.routeCode}")
                     Log.d("HomeFragment", "Current filter state: favorites=$isShowingFavorites, nearest=$isShowingNearestRoutes")
+
                     // Add small delay to prevent flickering during route display
                     viewLifecycleOwner.lifecycleScope.launch {
-                        delay(100) // Small delay to ensure routes are fully rendered
+                        delay(100)
                         withContext(Dispatchers.Main) {
                             selectRoute(routes[0], null)
                         }
                     }
                 }
                 
-                // Add debug button to test route clickability
                 addDebugRouteTestButton()
             }
         }
@@ -549,18 +533,16 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             if (route != null) {
                 Log.d("HomeFragment", "=== POLYLINE CLICK DETECTED ===")
                 Log.d("HomeFragment", "Route clicked: ${route.route.routeCode}")
-                selectRoute(route, null) // No layer needed for polyline approach
+                selectRoute(route, null)
             }
         }
         
-        // Add map click listener to clear selection
         googleMap.setOnMapClickListener {
             clearRouteSelection()
         }
     }
     
     private fun addDebugRouteTestButton() {
-        // Add a debug button to manually test route clickability
 //        binding.fabCurrentLocation.setOnLongClickListener {
 //            testRouteClickability()
 //            true
@@ -590,10 +572,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     
     
     private fun getColorForRoute(name: String): Int {
-        // Use cached colors for consistent assignment across all routes
         return routeColorCache.getOrPut(name) {
             val hash = name.hashCode()
-            val colorIndex = (hash and 0x7FFFFFFF) % 6 // Ensure positive modulo
+            val colorIndex = (hash and 0x7FFFFFFF) % 6
             when (colorIndex) {
                 0 -> Color.BLUE
                 1 -> Color.RED
@@ -640,8 +621,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                                     .position(latLng)
                                     .title(route.route.routeCode)
                                     .snippet("Route: ${route.startTerminal.name} → ${route.endTerminal.name}")
-                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)) // Orange for route labels
-                                    .alpha(0.8f) // Slightly transparent
+                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE))
+                                    .alpha(0.8f)
                                     .zIndex(1f) // Lower z-index than terminal markers
                             )
                             marker?.let { routeLabelMarkers.add(it) }
@@ -659,10 +640,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         Log.d("HomeFragment", "Route has start terminal: ${route.startTerminal.name} (id: ${route.route.startTerminalId})")
         Log.d("HomeFragment", "Route has end terminal: ${route.endTerminal.name} (id: ${route.route.endTerminalId})")
         
-        // Clear previous selection
         clearRouteSelection()
         
-        // Highlight the selected route (for polyline approach) - but keep original color
         routePolylines.forEach { polyline ->
             val polylineRoute = polyline.tag as? RouteWithTerminals
             if (polylineRoute?.route?.id == route.route.id) {
@@ -674,24 +653,19 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             }
         }
         
-        // Show terminals for this route
         showTerminalsForRoute(route)
-        
-        // Show route info
         showRouteInfo(route)
     }
     
     private fun clearRouteSelection() {
-        // Clear route highlighting for polylines - only reset width, keep original colors
+        // Clear route highlighting for polylines; only reset width, keep original colors
         routePolylines.forEach { polyline ->
             polyline.width = 12f
         }
         
-        // Hide terminals
         markers.forEach { it.remove() }
         markers.clear()
         
-        // Clear walking path
         clearWalkingPath()
         
         // Hide route info
@@ -709,16 +683,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 markers.forEach { it.remove() }
                 markers.clear()
                 
-                // Don't clear and re-add routes here - this causes flickering
-                // The routes are already displayed, we just need to highlight the selected one
-                
-                // Extract terminal coordinates directly from the route GeoJSON
                 val terminalPositions = extractTerminalPositionsFromRoute(route)
                 
-                // Get route color for markers
                 val routeColor = getColorForRoute(route.route.routeCode)
                 
-                // Add start terminal marker with route color
+                // Add color to terminal marker
                 terminalPositions.start?.let { position ->
                     val routeParts = route.route.routeCode.split("-")
                     val startTerminalName = if (routeParts.size > 1) routeParts[0].trim() else "Start"
@@ -733,7 +702,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     Log.d("HomeFragment", "Added start terminal marker for ${route.route.routeCode} at: $position")
                 }
                 
-                // Add end terminal marker with route color
+                // Add color to terminal marker
                 terminalPositions.end?.let { position ->
                     val routeParts = route.route.routeCode.split("-")
                     val endTerminalName = if (routeParts.size > 1) routeParts[1].trim() else "End"
@@ -761,7 +730,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     markers.forEach { marker -> builder.include(marker.position) }
                     val bounds = builder.build()
                     
-                    val padding = 300 // Maximum padding to ensure route is fully visible
+                    val padding = 300
                     googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
                     Log.d("HomeFragment", "Zoomed to show terminals for ${route.route.routeCode} with maximum padding: $padding")
                 } else {
@@ -781,20 +750,20 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 val coordinates = geometry.getJSONArray("coordinates")
                 
                 if (coordinates.length() > 1) {
-                    // First coordinate (start terminal)
+                    // First coordinate (termina 1)
                     val startCoord = coordinates.getJSONArray(0)
                     val startLng = startCoord.getDouble(0)
                     val startLat = startCoord.getDouble(1)
                     val startPosition = LatLng(startLat, startLng)
                     
-                    // Last coordinate (end terminal)
+                    // Last coordinate (terminal 2)
                     val lastIndex = coordinates.length() - 1
                     val endCoord = coordinates.getJSONArray(lastIndex)
                     val endLng = endCoord.getDouble(0)
                     val endLat = endCoord.getDouble(1)
                     val endPosition = LatLng(endLat, endLng)
                     
-                    // Burnham Park/Plaza coordinates (approximate center)
+                    // Burnham Park coordinates (approximate center)
                     val plazaCenter = LatLng(16.4125, 120.5975)
                     
                     // Calculate which terminal is closer to Plaza
@@ -805,19 +774,19 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     val routeName = route.route.routeCode
                     if (routeName.contains("Plaza", ignoreCase = true)) {
                         // For routes ending at Plaza, the Plaza terminal should be the end terminal
-                        if (endDistance < startDistance) {
-                            // End is closer to Plaza, so it's likely the Plaza terminal
-                            return TerminalPositions(
-                                start = startPosition,
-                                end = endPosition
-                            )
-                        } else {
-                            // Start is closer to Plaza, so swap positions
-                            return TerminalPositions(
-                                start = endPosition,
-                                end = startPosition
-                            )
-                        }
+	                    return if (endDistance < startDistance) {
+		                    // End is closer to Plaza, so it's likely the Plaza terminal
+		                    TerminalPositions(
+			                    start = startPosition,
+			                    end = endPosition
+		                    )
+	                    } else {
+		                    // Start is closer to Plaza, so swap positions
+		                    TerminalPositions(
+			                    start = endPosition,
+			                    end = startPosition
+		                    )
+	                    }
                     } else {
                         // For other routes, use the original order
                         return TerminalPositions(
@@ -1802,6 +1771,39 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         
         return earthRadius * c
+    }
+
+    private suspend fun autoSelectRoutesForTerminal(terminalId: Long) {
+        try {
+            // Find all routes that contain this terminal
+            val routes = routeRepository.findRoutesByTerminalId(terminalId)
+            
+            if (routes.isNotEmpty()) {
+                // Auto-select the first route
+                val firstRoute = routes[0]
+                withContext(Dispatchers.Main) {
+                    // Find the corresponding RouteWithTerminals object
+                    val database = DyipQrDatabase.getInstance(requireContext())
+                    val routeDao = database.routeDao()
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val routeWithTerminals = routeDao.getRouteWithTerminalsById(firstRoute.id)
+                        if (routeWithTerminals != null) {
+                            selectRoute(routeWithTerminals, null)
+                            showDebouncedToast("Auto-selected route: ${firstRoute.routeCode}")
+                        }
+                    }
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    showDebouncedToast("No routes found for this terminal")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("HomeFragment", "Error auto-selecting routes for terminal $terminalId", e)
+            withContext(Dispatchers.Main) {
+                showDebouncedToast("Error finding routes for this terminal")
+            }
+        }
     }
 
     private fun showBaguioWelcomeMessage() {

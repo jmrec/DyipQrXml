@@ -36,7 +36,6 @@ class SavedAdapter(
             binding.textTerminalName.text = route.routeCode
 //            binding.textTerminalDescription.text = "${route.startTerminalName} → ${route.endTerminalName}"
             
-            // Show fare and travel time info
             val fareInfo = "Fare: ₱${route.fare}"
             val timeInfo = if (route.estimatedTravelTimeInSeconds != null) {
                 val minutes = route.estimatedTravelTimeInSeconds / 60
