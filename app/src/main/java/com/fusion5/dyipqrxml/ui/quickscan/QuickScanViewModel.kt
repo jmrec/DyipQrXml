@@ -19,7 +19,8 @@ data class QuickScanUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null,
-    val validatedTerminalName: String? = null
+    val validatedTerminalName: String? = null,
+    val scannedTerminalId: Long? = null
 )
 
 class QuickScanViewModel(
@@ -30,6 +31,11 @@ class QuickScanViewModel(
 
     private val _uiState = MutableStateFlow(QuickScanUiState())
     val uiState: StateFlow<QuickScanUiState> = _uiState.asStateFlow()
+
+    // Debounce state to prevent processing the same scan result repeatedly within a short time window.
+    private var lastScanContent: String? = null
+    private var lastScanTimestamp: Long = 0L
+    private val scanDebounceWindowMillis: Long = 1500L
 
     fun startScanning() {
         _uiState.update {
@@ -48,9 +54,21 @@ class QuickScanViewModel(
     }
 
     fun onScanResult(result: String) {
+        val normalized = result.trim()
+        if (normalized.isEmpty()) return
+
+        val now = System.currentTimeMillis()
+        if (normalized == lastScanContent && (now - lastScanTimestamp) < scanDebounceWindowMillis) {
+            // Ignore duplicate scan results within the debounce window.
+            return
+        }
+
+        lastScanContent = normalized
+        lastScanTimestamp = now
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            processScanResult(result)
+            processScanResult(normalized)
         }
     }
 
@@ -83,15 +101,14 @@ class QuickScanViewModel(
             val terminal = if (terminalId != null) {
                 terminalRepository.getById(terminalId)
             } else {
-                null
-            }
+				null
+	        }
             
             // Get current user ID from session
             val currentUserId = sessionRepository.sessionUserId.first()
             
             if (terminal != null) {
                 // Valid terminal ID found
-                
                 // Save to scan history
                 scanHistoryRepository.saveScan("Terminal: ${terminal.name} (ID: $result)", currentUserId)
                 
@@ -102,7 +119,8 @@ class QuickScanViewModel(
                         validatedTerminalName = terminal.name,
                         successMessage = "Valid terminal scanned: ${terminal.name}",
                         errorMessage = null,
-                        isLoading = false
+                        isLoading = false,
+                        scannedTerminalId = terminal.id
                     )
                 }
             } else {
@@ -116,7 +134,8 @@ class QuickScanViewModel(
                         validatedTerminalName = null,
                         successMessage = "QR code scanned successfully!",
                         errorMessage = null,
-                        isLoading = false
+                        isLoading = false,
+                        scannedTerminalId = null
                     )
                 }
             }
@@ -131,7 +150,8 @@ class QuickScanViewModel(
                     scanResult = result,
                     errorMessage = "Error processing scan: ${e.message}",
                     successMessage = null,
-                    isLoading = false
+                    isLoading = false,
+                    scannedTerminalId = null
                 )
             }
         }
