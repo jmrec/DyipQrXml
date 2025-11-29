@@ -54,6 +54,14 @@ interface RouteDao {
         clearRoutes()
     }
 
+    @Transaction
+    @Query("""
+        SELECT * FROM Routes
+        WHERE start_terminal_id = :terminalId OR end_terminal_id = :terminalId
+        ORDER BY route_code
+    """)
+    suspend fun findRoutesByTerminalId(terminalId: Long): List<RouteWithTerminals>
+
     @Query("SELECT COUNT(*) FROM Routes")
     suspend fun count(): Int
 }

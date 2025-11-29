@@ -22,6 +22,9 @@ class LocalRouteRepository(
     override fun observeAllRoutesWithTerminals(): Flow<List<Route>> =
         routeDao.observeAllRoutesWithTerminals().map { list -> list.map { it.toDomain() } }
 
+    override suspend fun findRoutesByTerminalId(terminalId: Long): List<Route> =
+        routeDao.findRoutesByTerminalId(terminalId).map { it.toDomain() }
+
     override fun searchRoutesWithTerminals(query: String): Flow<List<Route>> =
         routeDao.searchRoutesWithTerminals(query).map { list -> list.map { it.toDomain() } }
 }

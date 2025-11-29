@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface RouteRepository {
     fun observeAll(): Flow<List<Route>>
     suspend fun getById(id: Long): Route?
+    suspend fun findRoutesByTerminalId(terminalId: Long): List<Route>
     fun search(query: String): Flow<List<Route>>
     fun observeAllRoutesWithTerminals(): Flow<List<Route>>
     fun searchRoutesWithTerminals(query: String): Flow<List<Route>>
