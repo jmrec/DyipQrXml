@@ -8,7 +8,7 @@
     <item
         android:id="@+id/terminalsFragment"
         android:icon="@drawable/ic_route"
-        android:title="Terminals" />
+        android:title="Routes" />
 
     <item
         android:id="@+id/quickScanFragment"
