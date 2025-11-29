@@ -4,6 +4,7 @@ plugins {
 	kotlin("kapt")
 //	alias(libs.plugins.google.android.libraries.mapsplatform.secrets.gradle.plugin)
 	alias(libs.plugins.secrets.gradle.plugin)
+	alias(libs.plugins.androidx.navigation.safeargs)
 }
 
 android {
