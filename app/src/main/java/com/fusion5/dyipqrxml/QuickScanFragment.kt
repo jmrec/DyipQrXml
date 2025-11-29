@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.fusion5.dyipqrxml.databinding.FragmentQuickScanBinding
 import com.fusion5.dyipqrxml.ui.quickscan.QuickScanViewModel
 import com.fusion5.dyipqrxml.ui.quickscan.QuickScanViewModelFactory
@@ -80,6 +81,10 @@ class QuickScanFragment : Fragment() {
         binding.buttonRescan.setOnClickListener {
             resetScanning()
         }
+
+        binding.buttonGoToMap.setOnClickListener {
+            navigateToMap()
+        }
     }
 
     private fun setupObservers() {
@@ -94,6 +99,13 @@ class QuickScanFragment : Fragment() {
                 }
                 if (state.successMessage != null) {
                     updateScanResult(state.successMessage)
+                }
+                
+                // Show "Go to Map" button only for valid terminal scans
+                binding.buttonGoToMap.visibility = if (state.scannedTerminalId != null) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
                 }
             }
         }
@@ -177,6 +189,15 @@ class QuickScanFragment : Fragment() {
             if (message != "Scanning for QR Code...") {
                 binding.buttonRescan.visibility = View.VISIBLE
             }
+        }
+    }
+
+    private fun navigateToMap() {
+        val scannedTerminalId = viewModel.uiState.value.scannedTerminalId
+        if (scannedTerminalId != null) {
+            // Navigate to HomeFragment with the terminal ID
+            val action = QuickScanFragmentDirections.actionQuickScanToHome(scannedTerminalId)
+            findNavController().navigate(action)
         }
     }
 

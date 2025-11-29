@@ -10,6 +10,10 @@
         android:name="com.fusion5.dyipqrxml.HomeFragment"
         android:label="Home"
         tools:layout="@layout/fragment_home">
+        <argument
+            android:name="scannedTerminalId"
+            android:defaultValue="-1L"
+            app:argType="long" />
         <action
             android:id="@+id/action_home_to_quickScan"
             app:destination="@id/quickScanFragment" />
@@ -31,7 +35,15 @@
         android:id="@+id/quickScanFragment"
         android:name="com.fusion5.dyipqrxml.QuickScanFragment"
         android:label="Quick Scan"
-        tools:layout="@layout/fragment_quick_scan" />
+        tools:layout="@layout/fragment_quick_scan">
+        <action
+            android:id="@+id/action_quickScan_to_home"
+            app:destination="@id/homeFragment">
+            <argument
+                android:name="scannedTerminalId"
+                app:argType="long" />
+        </action>
+    </fragment>
 
     <fragment
         android:id="@+id/loginFragment"
